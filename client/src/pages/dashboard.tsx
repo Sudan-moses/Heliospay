@@ -1,0 +1,162 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, CreditCard, AlertCircle, Wallet } from "lucide-react";
+import { useStudents } from "@/hooks/use-students";
+import { usePayments } from "@/hooks/use-payments";
+import { formatCurrency } from "@/lib/utils";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { format, subDays, parseISO } from "date-fns";
+
+export default function Dashboard() {
+  const { data: students, isLoading: loadingStudents } = useStudents();
+  const { data: payments, isLoading: loadingPayments } = usePayments();
+
+  if (loadingStudents || loadingPayments) {
+    return <div className="h-[50vh] flex items-center justify-center"><div className="animate-pulse flex flex-col items-center"><div className="h-8 w-8 bg-primary rounded-full animate-bounce" /><p className="mt-4 text-muted-foreground font-medium">Loading Dashboard...</p></div></div>;
+  }
+
+  // Calculate metrics
+  const activeStudents = students?.filter(s => s.status === 'Active') || [];
+  const totalStudents = students?.length || 0;
+  
+  const totalCollected = payments?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
+  
+  const totalExpected = activeStudents.reduce((acc, curr) => acc + curr.tuitionFee, 0);
+  const totalOutstanding = activeStudents.reduce((acc, curr) => acc + curr.remainingBalance, 0);
+
+  // Group payments by date for chart (last 7 days)
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = subDays(new Date(), 6 - i);
+    return {
+      date: format(d, 'MMM dd'),
+      rawDate: format(d, 'yyyy-MM-dd'),
+      amount: 0
+    };
+  });
+
+  payments?.forEach(p => {
+    if (!p.paymentDate) return;
+    const pDate = format(new Date(p.paymentDate), 'yyyy-MM-dd');
+    const day = last7Days.find(d => d.rawDate === pDate);
+    if (day) {
+      day.amount += p.amount;
+    }
+  });
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <h1 className="text-3xl font-display font-bold text-foreground">Dashboard Overview</h1>
+        <p className="text-muted-foreground mt-1 text-lg">Key metrics and financial health</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard 
+          title="Total Students" 
+          value={totalStudents.toString()} 
+          subtitle={`${activeStudents.length} currently active`}
+          icon={<Users className="h-5 w-5 text-primary" />} 
+        />
+        <MetricCard 
+          title="Total Collected" 
+          value={formatCurrency(totalCollected)} 
+          subtitle="All-time payments"
+          icon={<Wallet className="h-5 w-5 text-emerald-500" />} 
+        />
+        <MetricCard 
+          title="Total Expected" 
+          value={formatCurrency(totalExpected)} 
+          subtitle="Active students tuition"
+          icon={<CreditCard className="h-5 w-5 text-blue-500" />} 
+        />
+        <MetricCard 
+          title="Outstanding Balance" 
+          value={formatCurrency(totalOutstanding)} 
+          subtitle="Needs collection"
+          icon={<AlertCircle className="h-5 w-5 text-destructive" />} 
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="col-span-1 lg:col-span-2 shadow-sm border-border/50">
+          <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
+            <CardTitle className="text-lg font-display">Collections (Last 7 Days)</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={last7Days}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} dy={10} />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tickFormatter={(val) => `₦${(val/1000)}k`}
+                    tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}}
+                    dx={-10}
+                  />
+                  <Tooltip 
+                    cursor={{fill: 'hsl(var(--muted))'}}
+                    contentStyle={{borderRadius: '8px', border: '1px solid hsl(var(--border))', boxShadow: 'var(--shadow-md)'}}
+                    formatter={(value: number) => [formatCurrency(value), 'Amount']}
+                  />
+                  <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
+            <CardTitle className="text-lg font-display">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 px-0">
+            <div className="space-y-0">
+              {payments?.slice(0, 5).map((payment) => (
+                <div key={payment.id} className="flex items-center justify-between py-3 px-6 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                      {payment.studentName?.charAt(0) || "S"}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">{payment.studentName}</span>
+                      <span className="text-xs text-muted-foreground">{payment.receiptNumber}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-bold text-emerald-600">+{formatCurrency(payment.amount)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd') : ''}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {(!payments || payments.length === 0) && (
+                <div className="text-center py-8 text-muted-foreground text-sm">No recent payments.</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ title, value, subtitle, icon }: { title: string, value: string, subtitle: string, icon: React.ReactNode }) {
+  return (
+    <Card className="shadow-sm border-border/50 hover:shadow-md transition-all duration-300">
+      <CardContent className="p-6">
+        <div className="flex justify-between items-start">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-3xl font-display font-bold text-foreground">{value}</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center">
+            {icon}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-4 font-medium">{subtitle}</p>
+      </CardContent>
+    </Card>
+  );
+}
