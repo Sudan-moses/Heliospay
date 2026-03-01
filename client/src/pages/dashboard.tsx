@@ -49,8 +49,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">Dashboard Overview</h1>
-        <p className="text-muted-foreground mt-1 text-lg">Key metrics and financial health</p>
+        <h1 className="text-2xl font-display font-bold text-foreground">Dashboard Overview</h1>
+        <p className="text-muted-foreground mt-1 text-base">Key metrics and financial health</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -117,17 +117,17 @@ export default function Dashboard() {
           <CardContent className="pt-6 px-0">
             <div className="space-y-0">
               {payments?.slice(0, 5).map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between py-3 px-6 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                <div key={payment.id} className="flex items-center justify-between py-3 px-5 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                       {payment.studentName?.charAt(0) || "S"}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">{payment.studentName}</span>
-                      <span className="text-xs text-muted-foreground">{payment.receiptNumber}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-semibold truncate">{payment.studentName}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{payment.receiptNumber}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end">
+                  <div className="flex flex-col items-end shrink-0 ml-2">
                     <span className="text-sm font-bold text-emerald-600">+{formatCurrency(payment.amount, payment.currency)}</span>
                     <span className="text-xs text-muted-foreground">
                       {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd') : ''}
@@ -149,17 +149,17 @@ export default function Dashboard() {
 function MetricCard({ title, value, subtitle, icon }: { title: string, value: string, subtitle: string, icon: React.ReactNode }) {
   return (
     <Card className="shadow-sm border-border/50 hover:shadow-md transition-all duration-300">
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-display font-bold text-foreground">{value}</p>
+      <CardContent className="p-5">
+        <div className="flex justify-between items-start gap-2">
+          <div className="space-y-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+            <p className="text-xl font-display font-bold text-foreground truncate">{value}</p>
           </div>
-          <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center">
+          <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
             {icon}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-4 font-medium">{subtitle}</p>
+        <p className="text-sm text-muted-foreground mt-3">{subtitle}</p>
       </CardContent>
     </Card>
   );
