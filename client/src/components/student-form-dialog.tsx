@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 
 const formSchema = insertStudentSchema.extend({
   tuitionFee: z.coerce.number().min(0, "Tuition fee must be positive"),
+  currency: z.string().min(1, "Please select a currency"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -40,6 +41,7 @@ export function StudentFormDialog({
       parentPhoneNumber: student?.parentPhoneNumber || "",
       status: student?.status || "Active",
       tuitionFee: student?.tuitionFee || 0,
+      currency: student?.currency || "UGX",
     },
   });
 
@@ -164,19 +166,42 @@ export function StudentFormDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="tuitionFee"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Expected Tuition Fee</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="0.00" className="h-11" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="tuitionFee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected Tuition Fee</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0.00" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="UGX">UGX (Shillings)</SelectItem>
+                          <SelectItem value="USD">USD (Dollars)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="pt-4 flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-11 px-6">

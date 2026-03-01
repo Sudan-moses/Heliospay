@@ -37,7 +37,7 @@ export class DatabaseStorage implements IStorage {
     const allPayments = await db.select().from(payments);
     
     return allStudents.map(student => {
-      const studentPayments = allPayments.filter(p => p.studentId === student.id);
+      const studentPayments = allPayments.filter(p => p.studentId === student.id && p.currency === student.currency);
       const totalPaid = studentPayments.reduce((sum, p) => sum + p.amount, 0);
       return {
         ...student,
@@ -52,7 +52,7 @@ export class DatabaseStorage implements IStorage {
     if (!student) return undefined;
     
     const studentPayments = await db.select().from(payments).where(eq(payments.studentId, id)).orderBy(desc(payments.paymentDate));
-    const totalPaid = studentPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPaid = studentPayments.filter(p => p.currency === student.currency).reduce((sum, p) => sum + p.amount, 0);
     
     return {
       ...student,

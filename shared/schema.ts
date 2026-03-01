@@ -15,6 +15,7 @@ export const students = pgTable("students", {
   parentPhoneNumber: text("parent_phone_number").notNull(),
   status: text("status").notNull().default("Active"),
   tuitionFee: integer("tuition_fee").notNull().default(0), // Total expected fee
+  currency: text("currency").notNull().default("UGX"), // UGX or USD
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -22,6 +23,7 @@ export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => students.id),
   amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("UGX"),
   paymentDate: timestamp("payment_date").defaultNow(),
   receiptNumber: text("receipt_number").notNull().unique(),
   recordedBy: text("recorded_by").notNull(), // user email or ID

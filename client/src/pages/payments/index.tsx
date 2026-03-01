@@ -96,7 +96,7 @@ export default function PaymentsPage() {
                   <TableCell className="text-muted-foreground text-sm">{payment.recordedBy}</TableCell>
                   <TableCell className="text-right">
                     <span className="font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-200">
-                      +{formatCurrency(payment.amount)}
+                      +{formatCurrency(payment.amount, payment.currency)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">

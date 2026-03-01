@@ -86,17 +86,17 @@ export default function StudentProfile() {
               <div className="space-y-6">
                 <div>
                   <p className="text-slate-400 text-xs font-medium mb-1">Expected Tuition</p>
-                  <p className="text-3xl font-display font-bold">{formatCurrency(student.tuitionFee)}</p>
+                  <p className="text-3xl font-display font-bold">{formatCurrency(student.tuitionFee, student.currency)}</p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700/50">
                   <div>
                     <p className="text-emerald-400 text-xs font-medium mb-1">Total Paid</p>
-                    <p className="text-lg font-bold text-white">{formatCurrency(student.totalPaid)}</p>
+                    <p className="text-lg font-bold text-white">{formatCurrency(student.totalPaid, student.currency)}</p>
                   </div>
                   <div>
                     <p className="text-red-400 text-xs font-medium mb-1">Remaining</p>
-                    <p className="text-lg font-bold text-white">{formatCurrency(student.remainingBalance)}</p>
+                    <p className="text-lg font-bold text-white">{formatCurrency(student.remainingBalance, student.currency)}</p>
                   </div>
                 </div>
 
@@ -141,7 +141,7 @@ export default function StudentProfile() {
                           <CreditCard className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-bold text-lg text-foreground">{formatCurrency(payment.amount)}</p>
+                          <p className="font-bold text-lg text-foreground">{formatCurrency(payment.amount, payment.currency)}</p>
                           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                             <span className="font-mono bg-muted px-2 py-0.5 rounded">{payment.receiptNumber}</span>
                             <span>•</span>

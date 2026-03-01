@@ -105,7 +105,8 @@ export async function registerRoutes(
           academicYear: "2023/2024",
           parentPhoneNumber: "+254700000001",
           status: "Active",
-          tuitionFee: 50000
+          tuitionFee: 50000,
+          currency: "UGX"
         });
         
         const student2 = await storage.createStudent({
@@ -115,12 +116,14 @@ export async function registerRoutes(
           academicYear: "2023/2024",
           parentPhoneNumber: "+254700000002",
           status: "Active",
-          tuitionFee: 60000
+          tuitionFee: 200,
+          currency: "USD"
         });
 
         await storage.createPayment({
           studentId: student1.id,
           amount: 25000,
+          currency: "UGX",
           receiptNumber: "RCPT001",
           recordedBy: "Admin",
           notes: "First installment"

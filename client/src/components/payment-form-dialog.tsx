@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 const formSchema = insertPaymentSchema.extend({
   amount: z.coerce.number().min(1, "Amount must be at least 1"),
   studentId: z.coerce.number().min(1, "Please select a student"),
+  currency: z.string().min(1, "Please select a currency"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -39,6 +40,7 @@ export function PaymentFormDialog({
     defaultValues: {
       studentId: prefilledStudentId || 0,
       amount: 0,
+      currency: students?.find(s => s.id === prefilledStudentId)?.currency || "UGX",
       receiptNumber: `REC-${Date.now()}`,
       recordedBy: user?.email || "Unknown",
       notes: "",
@@ -78,7 +80,11 @@ export function PaymentFormDialog({
                   <FormItem>
                     <FormLabel>Select Student</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        const student = students?.find(s => s.id === Number(val));
+                        if (student) form.setValue('currency', student.currency);
+                      }} 
                       defaultValue={field.value ? String(field.value) : undefined}
                       disabled={!!prefilledStudentId}
                     >
@@ -116,18 +122,40 @@ export function PaymentFormDialog({
                 />
                 <FormField
                   control={form.control}
-                  name="receiptNumber"
+                  name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Receipt Number</FormLabel>
-                      <FormControl>
-                        <Input className="h-11 bg-muted font-mono text-sm" readOnly {...field} />
-                      </FormControl>
+                      <FormLabel>Currency</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="UGX">UGX</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="receiptNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Receipt Number</FormLabel>
+                    <FormControl>
+                      <Input className="h-11 bg-muted font-mono text-sm" readOnly {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

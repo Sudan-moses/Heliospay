@@ -18,12 +18,16 @@ export default function Dashboard() {
   const activeStudents = students?.filter(s => s.status === 'Active') || [];
   const totalStudents = students?.length || 0;
   
-  const totalCollected = payments?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
+  const totalCollectedUGX = payments?.filter(p => p.currency === 'UGX').reduce((acc, curr) => acc + curr.amount, 0) || 0;
+  const totalCollectedUSD = payments?.filter(p => p.currency === 'USD').reduce((acc, curr) => acc + curr.amount, 0) || 0;
   
-  const totalExpected = activeStudents.reduce((acc, curr) => acc + curr.tuitionFee, 0);
-  const totalOutstanding = activeStudents.reduce((acc, curr) => acc + curr.remainingBalance, 0);
+  const totalExpectedUGX = activeStudents.filter(s => s.currency === 'UGX').reduce((acc, curr) => acc + curr.tuitionFee, 0);
+  const totalOutstandingUGX = activeStudents.filter(s => s.currency === 'UGX').reduce((acc, curr) => acc + curr.remainingBalance, 0);
+  
+  const totalExpectedUSD = activeStudents.filter(s => s.currency === 'USD').reduce((acc, curr) => acc + curr.tuitionFee, 0);
+  const totalOutstandingUSD = activeStudents.filter(s => s.currency === 'USD').reduce((acc, curr) => acc + curr.remainingBalance, 0);
 
-  // Group payments by date for chart (last 7 days)
+  // Group payments by date for chart (last 7 days) - showing UGX as primary chart metric
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = subDays(new Date(), 6 - i);
     return {
@@ -33,7 +37,7 @@ export default function Dashboard() {
     };
   });
 
-  payments?.forEach(p => {
+  payments?.filter(p => p.currency === 'UGX').forEach(p => {
     if (!p.paymentDate) return;
     const pDate = format(new Date(p.paymentDate), 'yyyy-MM-dd');
     const day = last7Days.find(d => d.rawDate === pDate);
@@ -58,20 +62,20 @@ export default function Dashboard() {
         />
         <MetricCard 
           title="Total Collected" 
-          value={formatCurrency(totalCollected)} 
-          subtitle="All-time payments"
+          value={formatCurrency(totalCollectedUGX, 'UGX')} 
+          subtitle={`${formatCurrency(totalCollectedUSD, 'USD')} also collected`}
           icon={<Wallet className="h-5 w-5 text-emerald-500" />} 
         />
         <MetricCard 
           title="Total Expected" 
-          value={formatCurrency(totalExpected)} 
-          subtitle="Active students tuition"
+          value={formatCurrency(totalExpectedUGX, 'UGX')} 
+          subtitle={`${formatCurrency(totalExpectedUSD, 'USD')} expected in USD`}
           icon={<CreditCard className="h-5 w-5 text-blue-500" />} 
         />
         <MetricCard 
           title="Outstanding Balance" 
-          value={formatCurrency(totalOutstanding)} 
-          subtitle="Needs collection"
+          value={formatCurrency(totalOutstandingUGX, 'UGX')} 
+          subtitle={`${formatCurrency(totalOutstandingUSD, 'USD')} outstanding in USD`}
           icon={<AlertCircle className="h-5 w-5 text-destructive" />} 
         />
       </div>
@@ -79,7 +83,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="col-span-1 lg:col-span-2 shadow-sm border-border/50">
           <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
-            <CardTitle className="text-lg font-display">Collections (Last 7 Days)</CardTitle>
+            <CardTitle className="text-lg font-display">UGX Collections (Last 7 Days)</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="h-[300px] w-full">
@@ -90,14 +94,14 @@ export default function Dashboard() {
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tickFormatter={(val) => `₦${(val/1000)}k`}
+                    tickFormatter={(val) => `UGX ${(val/1000)}k`}
                     tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}}
                     dx={-10}
                   />
                   <Tooltip 
                     cursor={{fill: 'hsl(var(--muted))'}}
                     contentStyle={{borderRadius: '8px', border: '1px solid hsl(var(--border))', boxShadow: 'var(--shadow-md)'}}
-                    formatter={(value: number) => [formatCurrency(value), 'Amount']}
+                    formatter={(value: number) => [formatCurrency(value, 'UGX'), 'Amount']}
                   />
                   <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50} />
                 </BarChart>
@@ -124,7 +128,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-sm font-bold text-emerald-600">+{formatCurrency(payment.amount)}</span>
+                    <span className="text-sm font-bold text-emerald-600">+{formatCurrency(payment.amount, payment.currency)}</span>
                     <span className="text-xs text-muted-foreground">
                       {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd') : ''}
                     </span>

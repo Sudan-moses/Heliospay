@@ -42,7 +42,7 @@ export function ReceiptPrint({ payment, student }: { payment: any, student: any 
 
         <div className="bg-slate-50 rounded-xl p-6 mb-12 flex justify-between items-center border border-slate-100">
           <span className="text-lg font-bold text-slate-600 uppercase tracking-wider">Amount Received</span>
-          <span className="text-4xl font-bold text-slate-900">{formatCurrency(payment.amount)}</span>
+          <span className="text-4xl font-bold text-slate-900">{formatCurrency(payment.amount, payment.currency)}</span>
         </div>
 
         <div className="border-t-2 border-slate-100 pt-8 flex justify-between items-end">

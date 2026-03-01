@@ -106,10 +106,10 @@ export default function StudentsPage() {
                       {student.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(student.tuitionFee)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatCurrency(student.tuitionFee, student.currency)}</TableCell>
                   <TableCell className="text-right">
                     <span className={student.remainingBalance > 0 ? "text-destructive font-bold" : "text-emerald-600 font-bold"}>
-                      {formatCurrency(student.remainingBalance)}
+                      {formatCurrency(student.remainingBalance, student.currency)}
                     </span>
                   </TableCell>
                   <TableCell>
