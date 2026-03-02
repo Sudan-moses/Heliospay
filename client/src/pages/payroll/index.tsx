@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, CheckCircle, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, ChevronDown, ChevronUp, FileDown } from "lucide-react";
+import { generatePayrollReceiptPDF } from "@/lib/pdf-receipts";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Payroll } from "@shared/schema";
 
@@ -122,6 +123,17 @@ function PayrollCard({ payroll, isAdmin }: { payroll: Payroll; isAdmin: boolean 
                 data-testid={`button-delete-payroll-${payroll.id}`}
               >
                 <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            {detail?.items && (
+              <Button
+                variant="outline"
+                className="hover:text-blue-600"
+                onClick={() => generatePayrollReceiptPDF(payroll, detail?.items || [])}
+                data-testid={`button-pdf-payroll-${payroll.id}`}
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Download PDF
               </Button>
             )}
           </div>

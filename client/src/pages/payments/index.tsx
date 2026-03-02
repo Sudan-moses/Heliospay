@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Printer } from "lucide-react";
+import { Plus, Search, Printer, FileDown } from "lucide-react";
 import { PaymentFormDialog } from "@/components/payment-form-dialog";
+import { generatePaymentReceiptPDF } from "@/lib/pdf-receipts";
 import { ReceiptPrint } from "@/components/receipt-print";
 import { Input } from "@/components/ui/input";
 
@@ -17,15 +18,15 @@ export default function PaymentsPage() {
   
   const [printData, setPrintData] = useState<{payment: any, student: any} | null>(null);
 
+  const buildStudentFromPayment = (payment: any) => ({
+    fullName: payment.studentName,
+    admissionNumber: payment.studentAdmissionNumber || "N/A",
+    classGrade: payment.studentClassGrade || "N/A",
+    academicYear: payment.studentAcademicYear || new Date().getFullYear().toString(),
+  });
+
   const handlePrint = (payment: any) => {
-    // Generate a mock student object just for the receipt from available data
-    const mockStudent = {
-      fullName: payment.studentName,
-      admissionNumber: "See Profile",
-      classGrade: "N/A",
-      academicYear: new Date().getFullYear().toString()
-    };
-    setPrintData({ payment, student: mockStudent });
+    setPrintData({ payment, student: buildStudentFromPayment(payment) });
     setTimeout(() => {
       window.print();
     }, 100);
@@ -106,6 +107,11 @@ export default function PaymentsPage() {
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" className="hover-elevate hover:text-primary" onClick={() => handlePrint(payment)} title="Print Receipt">
                       <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" title="Download PDF" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => {
+                      generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment));
+                    }}>
+                      <FileDown className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

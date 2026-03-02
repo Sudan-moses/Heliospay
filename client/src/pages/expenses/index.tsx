@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, FileDown } from "lucide-react";
 import { ExpenseFormDialog } from "@/components/expense-form-dialog";
+import { generateExpenseReceiptPDF } from "@/lib/pdf-receipts";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
@@ -81,7 +82,7 @@ export default function ExpensesPage() {
               <TableHead className="font-semibold text-foreground">Description</TableHead>
               <TableHead className="font-semibold text-foreground">Recorded By</TableHead>
               <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
-              <TableHead className="w-[80px] text-right">Actions</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -112,6 +113,16 @@ export default function ExpensesPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:text-blue-600"
+                      onClick={() => generateExpenseReceiptPDF(expense)}
+                      title="Download PDF"
+                      data-testid={`button-pdf-expense-${expense.id}`}
+                    >
+                      <FileDown className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

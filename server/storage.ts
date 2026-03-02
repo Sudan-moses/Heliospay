@@ -29,7 +29,7 @@ export interface IStorage {
   updateStudent(id: number, student: UpdateStudentRequest): Promise<Student>;
   deleteStudent(id: number): Promise<void>;
   
-  getPayments(): Promise<(Payment & { studentName: string })[]>;
+  getPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; studentAcademicYear: string })[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
 
   getExpenses(): Promise<Expense[]>;
@@ -105,7 +105,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(students).where(eq(students.id, id));
   }
 
-  async getPayments(): Promise<(Payment & { studentName: string })[]> {
+  async getPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; studentAcademicYear: string })[]> {
     const allPayments = await db.select().from(payments).orderBy(desc(payments.paymentDate));
     const allStudents = await db.select().from(students);
     
@@ -113,7 +113,10 @@ export class DatabaseStorage implements IStorage {
       const student = allStudents.find(s => s.id === payment.studentId);
       return {
         ...payment,
-        studentName: student ? student.fullName : 'Unknown'
+        studentName: student?.fullName || 'Unknown',
+        studentAdmissionNumber: student?.admissionNumber || 'N/A',
+        studentClassGrade: student?.classGrade || 'N/A',
+        studentAcademicYear: student?.academicYear || 'N/A',
       };
     });
   }

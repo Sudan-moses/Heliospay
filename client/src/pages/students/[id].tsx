@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
-import { ArrowLeft, CreditCard, Phone, Calendar, BookOpen, Clock, Plus } from "lucide-react";
+import { ArrowLeft, CreditCard, Phone, Calendar, BookOpen, Clock, Plus, FileDown } from "lucide-react";
 import { Link } from "wouter";
 import { PaymentFormDialog } from "@/components/payment-form-dialog";
 import { useState } from "react";
 import { ReceiptPrint } from "@/components/receipt-print";
+import { generatePaymentReceiptPDF } from "@/lib/pdf-receipts";
 
 export default function StudentProfile() {
   const [, params] = useRoute("/students/:id");
@@ -152,9 +153,14 @@ export default function StudentProfile() {
                           {payment.notes && <p className="text-sm mt-2 text-muted-foreground italic">"{payment.notes}"</p>}
                         </div>
                       </div>
-                      <Button variant="outline" className="shrink-0 hover-elevate" onClick={() => handlePrint(payment)}>
-                        Print Receipt
-                      </Button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button variant="outline" className="hover-elevate" onClick={() => handlePrint(payment)}>
+                          Print Receipt
+                        </Button>
+                        <Button variant="outline" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => generatePaymentReceiptPDF(payment, student)}>
+                          <FileDown className="mr-2 h-4 w-4" /> Download PDF
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
