@@ -5,10 +5,11 @@ import { type Teacher } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Info } from "lucide-react";
 import { TeacherFormDialog } from "@/components/teacher-form-dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function TeachersPage() {
   const { data: teachers, isLoading } = useTeachers();
@@ -63,7 +64,7 @@ export default function TeachersPage() {
               <TableHead className="font-semibold text-foreground">Name</TableHead>
               <TableHead className="font-semibold text-foreground">Phone</TableHead>
               <TableHead className="font-semibold text-foreground">Subjects</TableHead>
-              <TableHead className="font-semibold text-foreground text-right">Salary</TableHead>
+              <TableHead className="font-semibold text-foreground text-right">Net Salary</TableHead>
               <TableHead className="font-semibold text-foreground">Status</TableHead>
               <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
@@ -92,7 +93,64 @@ export default function TeachersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold" data-testid={`text-teacher-salary-${teacher.id}`}>
-                    {formatCurrency(teacher.baseSalary, teacher.currency)}
+                    {(() => {
+                      const netSalary = teacher.baseSalary + teacher.accommodationAllowance + teacher.transportAllowance + teacher.otherAllowances - teacher.deductions;
+                      const hasBreakdown = teacher.accommodationAllowance > 0 || teacher.transportAllowance > 0 || teacher.otherAllowances > 0 || teacher.deductions > 0;
+                      const salaryDisplay = formatCurrency(netSalary, teacher.currency);
+
+                      if (!hasBreakdown) {
+                        return salaryDisplay;
+                      }
+
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                {salaryDisplay}
+                                <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="text-sm">
+                              <div className="space-y-1">
+                                <div className="flex justify-between gap-4">
+                                  <span>Base Salary:</span>
+                                  <span>{formatCurrency(teacher.baseSalary, teacher.currency)}</span>
+                                </div>
+                                {teacher.accommodationAllowance > 0 && (
+                                  <div className="flex justify-between gap-4">
+                                    <span>Accommodation:</span>
+                                    <span>{formatCurrency(teacher.accommodationAllowance, teacher.currency)}</span>
+                                  </div>
+                                )}
+                                {teacher.transportAllowance > 0 && (
+                                  <div className="flex justify-between gap-4">
+                                    <span>Transport:</span>
+                                    <span>{formatCurrency(teacher.transportAllowance, teacher.currency)}</span>
+                                  </div>
+                                )}
+                                {teacher.otherAllowances > 0 && (
+                                  <div className="flex justify-between gap-4">
+                                    <span>Other Allowances:</span>
+                                    <span>{formatCurrency(teacher.otherAllowances, teacher.currency)}</span>
+                                  </div>
+                                )}
+                                {teacher.deductions > 0 && (
+                                  <div className="flex justify-between gap-4">
+                                    <span>Deductions:</span>
+                                    <span>-{formatCurrency(teacher.deductions, teacher.currency)}</span>
+                                  </div>
+                                )}
+                                <div className="border-t border-border pt-1 flex justify-between gap-4 font-semibold">
+                                  <span>Net Salary:</span>
+                                  <span>{formatCurrency(netSalary, teacher.currency)}</span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Badge

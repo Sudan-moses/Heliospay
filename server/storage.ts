@@ -187,7 +187,10 @@ export class DatabaseStorage implements IStorage {
     const payrollCurrency = data.currency || "UGX";
     const eligibleTeachers = activeTeachers.filter(t => t.baseSalary > 0 && t.currency === payrollCurrency);
 
-    const totalAmount = eligibleTeachers.reduce((sum, t) => sum + t.baseSalary, 0);
+    const getNetSalary = (t: typeof activeTeachers[0]) =>
+      t.baseSalary + (t.accommodationAllowance || 0) + (t.transportAllowance || 0) + (t.otherAllowances || 0) - (t.deductions || 0);
+
+    const totalAmount = eligibleTeachers.reduce((sum, t) => sum + getNetSalary(t), 0);
 
     const [payroll] = await db.insert(payrolls).values({
       month: data.month,
@@ -200,7 +203,7 @@ export class DatabaseStorage implements IStorage {
     const itemsToInsert = eligibleTeachers.map(t => ({
       payrollId: payroll.id,
       teacherId: t.id,
-      amount: t.baseSalary,
+      amount: getNetSalary(t),
       currency: t.currency,
     }));
 

@@ -146,6 +146,10 @@ export async function registerRoutes(
     try {
       const input = api.teachers.create.input.extend({
         baseSalary: z.coerce.number().min(0),
+        accommodationAllowance: z.coerce.number().min(0).optional(),
+        transportAllowance: z.coerce.number().min(0).optional(),
+        otherAllowances: z.coerce.number().min(0).optional(),
+        deductions: z.coerce.number().min(0).optional(),
       }).parse(req.body);
       const teacher = await storage.createTeacher(input);
       res.status(201).json(teacher);
@@ -161,6 +165,10 @@ export async function registerRoutes(
     try {
       const input = api.teachers.update.input.extend({
         baseSalary: z.coerce.number().min(0).optional(),
+        accommodationAllowance: z.coerce.number().min(0).optional(),
+        transportAllowance: z.coerce.number().min(0).optional(),
+        otherAllowances: z.coerce.number().min(0).optional(),
+        deductions: z.coerce.number().min(0).optional(),
       }).parse(req.body);
       const teacher = await storage.updateTeacher(Number(req.params.id), input);
       res.json(teacher);

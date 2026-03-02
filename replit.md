@@ -18,7 +18,7 @@ A web-based School Payment Recording System for private primary and secondary sc
 - Auto-generated receipt numbers and printable receipts (include term and fee type)
 - PDF receipt generation for payments, expenses, and payroll (via jspdf, client-side)
 - Expense recording by category (Rent, Maintenance, Security, Salaries, Utilities, Supplies, Transport, Other)
-- Teacher management (name, phone, subjects, salary, status)
+- Teacher management (name, phone, subjects, salary with allowances/deductions, status)
 - Payroll generation from active teachers, with approval workflow (Draft → Approved/Rejected)
 - Dashboard with charts and financial metrics
 - Multi-currency support: UGX (Ugandan Shillings) and USD
