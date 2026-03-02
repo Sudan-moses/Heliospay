@@ -2,11 +2,14 @@ import { db } from "./db";
 import {
   students,
   payments,
+  expenses,
   type Student,
   type InsertStudent,
   type Payment,
   type InsertPayment,
   type UpdateStudentRequest,
+  type Expense,
+  type InsertExpense,
 } from "@shared/schema";
 import { eq, desc, ilike, or } from "drizzle-orm";
 
@@ -19,6 +22,10 @@ export interface IStorage {
   
   getPayments(): Promise<(Payment & { studentName: string })[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
+
+  getExpenses(): Promise<Expense[]>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  deleteExpense(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -93,6 +100,19 @@ export class DatabaseStorage implements IStorage {
   async createPayment(paymentData: InsertPayment): Promise<Payment> {
     const [payment] = await db.insert(payments).values(paymentData).returning();
     return payment;
+  }
+
+  async getExpenses(): Promise<Expense[]> {
+    return await db.select().from(expenses).orderBy(desc(expenses.expenseDate));
+  }
+
+  async createExpense(expenseData: InsertExpense): Promise<Expense> {
+    const [expense] = await db.insert(expenses).values(expenseData).returning();
+    return expense;
+  }
+
+  async deleteExpense(id: number): Promise<void> {
+    await db.delete(expenses).where(eq(expenses.id, id));
   }
 }
 

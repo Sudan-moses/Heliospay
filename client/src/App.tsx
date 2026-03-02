@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import StudentsPage from "@/pages/students";
 import StudentProfile from "@/pages/students/[id]";
 import PaymentsPage from "@/pages/payments";
+import ExpensesPage from "@/pages/expenses";
 import { Layout } from "@/components/layout";
 import { Loader2 } from "lucide-react";
 
@@ -22,6 +23,7 @@ function ProtectedRoutes() {
         <Route path="/students" component={StudentsPage}/>
         <Route path="/students/:id" component={StudentProfile}/>
         <Route path="/payments" component={PaymentsPage}/>
+        <Route path="/expenses" component={ExpensesPage}/>
         <Route component={NotFound} />
       </Switch>
     </Layout>

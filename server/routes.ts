@@ -103,6 +103,37 @@ export async function registerRoutes(
     }
   });
 
+  // Expenses routes
+  app.use('/api/expenses', isAuthenticated);
+
+  app.get(api.expenses.list.path, async (req, res) => {
+    const expensesList = await storage.getExpenses();
+    res.json(expensesList);
+  });
+
+  app.post(api.expenses.create.path, async (req, res) => {
+    try {
+      const input = api.expenses.create.input.extend({
+        amount: z.coerce.number().min(1, "Amount must be at least 1"),
+      }).parse(req.body);
+      const expense = await storage.createExpense(input);
+      res.status(201).json(expense);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.expenses.delete.path, async (req, res) => {
+    await storage.deleteExpense(Number(req.params.id));
+    res.status(204).send();
+  });
+
   // Seed initial data asynchronously after starting
   setTimeout(async () => {
     try {

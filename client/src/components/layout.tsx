@@ -14,13 +14,14 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt } from "lucide-react";
 import { Button } from "./ui/button";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Students", url: "/students", icon: Users },
   { title: "Payments", url: "/payments", icon: CreditCard },
+  { title: "Expenses", url: "/expenses", icon: Receipt },
 ];
 
 function AppSidebar() {

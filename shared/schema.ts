@@ -32,6 +32,16 @@ export const payments = pgTable("payments", {
   notes: text("notes"),
 });
 
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  category: text("category").notNull(),
+  description: text("description").notNull(),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("UGX"),
+  expenseDate: timestamp("expense_date").defaultNow(),
+  recordedBy: text("recorded_by").notNull(),
+});
+
 export const studentsRelations = relations(students, ({ many }) => ({
   payments: many(payments),
 }));
@@ -55,6 +65,11 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type CreateStudentRequest = InsertStudent;
 export type UpdateStudentRequest = Partial<InsertStudent>;
 export type StudentResponse = Student & { totalPaid: number; remainingBalance: number };
+
+export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, expenseDate: true });
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
 export type CreatePaymentRequest = InsertPayment;
 export type PaymentResponse = Payment & { studentName?: string };

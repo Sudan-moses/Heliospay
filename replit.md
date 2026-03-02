@@ -16,6 +16,7 @@ A web-based School Payment Recording System for private primary and secondary sc
 - Payment recording by term (Term 1, 2, 3) and fee type (Tuition, Admission, Uniform, Boarding)
 - SSCSE Fee option available exclusively for Senior 4 students (enforced on backend)
 - Auto-generated receipt numbers and printable receipts (include term and fee type)
+- Expense recording by category (Rent, Maintenance, Security, Salaries, Utilities, Supplies, Transport, Other)
 - Dashboard with charts and financial metrics
 - Multi-currency support: UGX (Ugandan Shillings) and USD
 
@@ -30,6 +31,9 @@ A web-based School Payment Recording System for private primary and secondary sc
 - `client/src/components/payment-form-dialog.tsx` — Payment form
 - `client/src/components/student-form-dialog.tsx` — Student form
 - `client/src/pages/auth-page.tsx` — Login page
+- `client/src/pages/expenses/index.tsx` — Expenses list page
+- `client/src/components/expense-form-dialog.tsx` — Expense recording form
+- `client/src/hooks/use-expenses.ts` — Expense data hooks
 - `client/src/lib/utils.ts` — Utility functions including `formatCurrency()`
 
 ## Running

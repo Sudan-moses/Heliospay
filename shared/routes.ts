@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertStudentSchema, insertPaymentSchema, students, payments } from './schema';
+import { insertStudentSchema, insertPaymentSchema, insertExpenseSchema, students, payments, expenses } from './schema';
 
 export const errorSchemas = {
   validation: z.object({ message: z.string(), field: z.string().optional() }),
@@ -68,6 +68,32 @@ export const api = {
       responses: {
         201: z.custom<typeof payments.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+  },
+  expenses: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/expenses' as const,
+      responses: {
+        200: z.array(z.custom<typeof expenses.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/expenses' as const,
+      input: insertExpenseSchema,
+      responses: {
+        201: z.custom<typeof expenses.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/expenses/:id' as const,
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
       },
     },
   },
