@@ -14,7 +14,7 @@ export function ReceiptPrint({ payment, student }: { payment: any, student: any 
               <GraduationCap className="h-10 w-10 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">EduPay Academy</h1>
+              <h1 className="text-3xl font-bold tracking-tight">HelioPay System</h1>
               <p className="text-slate-500 mt-1">Official Payment Receipt</p>
             </div>
           </div>

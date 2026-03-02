@@ -20,7 +20,7 @@ export default function AuthPage() {
           <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
             <GraduationCap className="h-7 w-7 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold text-2xl tracking-tight">EduPay</span>
+          <span className="font-display font-bold text-2xl tracking-tight">HelioPay</span>
         </div>
 
         <div className="relative z-10 max-w-lg mt-20">
@@ -54,7 +54,7 @@ export default function AuthPage() {
         </div>
 
         <div className="relative z-10 text-sm text-sidebar-foreground/40 font-medium">
-          © {new Date().getFullYear()} EduPay Systems. All rights reserved.
+          © {new Date().getFullYear()} HelioPay Systems. All rights reserved.
         </div>
       </div>
 

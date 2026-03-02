@@ -34,7 +34,7 @@ function AppSidebar() {
           <GraduationCap className="h-6 w-6 text-primary-foreground" />
         </div>
         <div className="flex flex-col">
-          <span className="font-display font-bold text-lg leading-tight">EduPay</span>
+          <span className="font-display font-bold text-lg leading-tight">HelioPay</span>
           <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">System</span>
         </div>
       </div>
