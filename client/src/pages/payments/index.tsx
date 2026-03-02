@@ -69,7 +69,8 @@ export default function PaymentsPage() {
               <TableHead className="font-semibold text-foreground">Receipt Number</TableHead>
               <TableHead className="font-semibold text-foreground">Date</TableHead>
               <TableHead className="font-semibold text-foreground">Student</TableHead>
-              <TableHead className="font-semibold text-foreground">Recorded By</TableHead>
+              <TableHead className="font-semibold text-foreground">Term</TableHead>
+              <TableHead className="font-semibold text-foreground">Fee Type</TableHead>
               <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
               <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
@@ -77,15 +78,15 @@ export default function PaymentsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">Loading transactions...</TableCell>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">Loading transactions...</TableCell>
               </TableRow>
             ) : filteredPayments?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">No payments found.</TableCell>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">No payments found.</TableCell>
               </TableRow>
             ) : (
               filteredPayments?.sort((a, b) => new Date(b.paymentDate!).getTime() - new Date(a.paymentDate!).getTime()).map((payment) => (
-                <TableRow key={payment.id} className="hover:bg-muted/30 transition-colors">
+                <TableRow key={payment.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-payment-${payment.id}`}>
                   <TableCell>
                     <span className="font-mono text-sm font-bold px-2 py-1 bg-muted rounded-md border border-border/50">{payment.receiptNumber}</span>
                   </TableCell>
@@ -93,7 +94,10 @@ export default function PaymentsPage() {
                     {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd, yyyy HH:mm') : ''}
                   </TableCell>
                   <TableCell className="font-semibold text-foreground">{payment.studentName}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{payment.recordedBy}</TableCell>
+                  <TableCell className="text-muted-foreground">{(payment as any).term || "—"}</TableCell>
+                  <TableCell>
+                    <span className="text-sm px-2 py-0.5 bg-muted rounded-md border border-border/50">{(payment as any).feeType || "—"}</span>
+                  </TableCell>
                   <TableCell className="text-right">
                     <span className="font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-200">
                       +{formatCurrency(payment.amount, payment.currency)}

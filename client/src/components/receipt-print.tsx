@@ -35,8 +35,10 @@ export function ReceiptPrint({ payment, student }: { payment: any, student: any 
           <div className="text-right">
             <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Details</p>
             <p className="text-slate-600">Date: {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMMM dd, yyyy') : 'N/A'}</p>
+            {payment.term && <p className="text-slate-600">Term: {payment.term}</p>}
+            {payment.feeType && <p className="text-slate-600">Fee Type: {payment.feeType}</p>}
             <p className="text-slate-600">Recorded By: {payment.recordedBy}</p>
-            <p className="text-slate-600 mt-2 italic text-sm">{payment.notes}</p>
+            {payment.notes && <p className="text-slate-600 mt-2 italic text-sm">{payment.notes}</p>}
           </div>
         </div>
 

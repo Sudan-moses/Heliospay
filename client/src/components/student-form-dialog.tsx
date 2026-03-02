@@ -121,10 +121,20 @@ export function StudentFormDialog({
                   name="classGrade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Class / Grade</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Primary 4" className="h-11" {...field} />
-                      </FormControl>
+                      <FormLabel>Class</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select class" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Senior 1">Senior 1</SelectItem>
+                          <SelectItem value="Senior 2">Senior 2</SelectItem>
+                          <SelectItem value="Senior 3">Senior 3</SelectItem>
+                          <SelectItem value="Senior 4">Senior 4</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

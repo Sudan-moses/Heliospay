@@ -13,10 +13,15 @@ import { useStudents } from "@/hooks/use-students";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
+const FEE_TYPES = ["Tuition Fee", "Admission Fee", "Uniform Fee", "Boarding Fee"];
+const TERMS = ["Term 1", "Term 2", "Term 3"];
+
 const formSchema = insertPaymentSchema.extend({
   amount: z.coerce.number().min(1, "Amount must be at least 1"),
   studentId: z.coerce.number().min(1, "Please select a student"),
   currency: z.string().min(1, "Please select a currency"),
+  term: z.string().min(1, "Please select a term"),
+  feeType: z.string().min(1, "Please select a fee type"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -41,6 +46,8 @@ export function PaymentFormDialog({
       studentId: prefilledStudentId || 0,
       amount: 0,
       currency: students?.find(s => s.id === prefilledStudentId)?.currency || "UGX",
+      term: "",
+      feeType: "",
       receiptNumber: `REC-${Date.now()}`,
       recordedBy: user?.email || "Unknown",
       notes: "",
@@ -83,8 +90,15 @@ export function PaymentFormDialog({
                       onValueChange={(val) => {
                         field.onChange(val);
                         const student = students?.find(s => s.id === Number(val));
-                        if (student) form.setValue('currency', student.currency);
-                      }} 
+                        if (student) {
+                          form.setValue('currency', student.currency);
+                          const isSenior4 = student.classGrade === "Senior 4";
+                          const currentFeeType = form.getValues("feeType");
+                          if (!isSenior4 && currentFeeType === "SSCSE Fee") {
+                            form.setValue("feeType", "");
+                          }
+                        }
+                      }}
                       defaultValue={field.value ? String(field.value) : undefined}
                       disabled={!!prefilledStudentId}
                     >
@@ -105,6 +119,60 @@ export function PaymentFormDialog({
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="term"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Term</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11" data-testid="select-term">
+                            <SelectValue placeholder="Select term" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {TERMS.map(t => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="feeType"
+                  render={({ field }) => {
+                    const selectedStudentId = form.watch("studentId");
+                    const selectedStudent = students?.find(s => s.id === Number(selectedStudentId));
+                    const isSenior4 = selectedStudent?.classGrade === "Senior 4";
+                    const availableFeeTypes = isSenior4 ? [...FEE_TYPES, "SSCSE Fee"] : FEE_TYPES;
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Fee Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-11" data-testid="select-fee-type">
+                              <SelectValue placeholder="Select fee type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableFeeTypes.map(ft => (
+                              <SelectItem key={ft} value={ft}>{ft}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField

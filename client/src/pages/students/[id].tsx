@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
-import { ArrowLeft, CreditCard, Phone, Calendar, BookOpen, Clock } from "lucide-react";
+import { ArrowLeft, CreditCard, Phone, Calendar, BookOpen, Clock, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { PaymentFormDialog } from "@/components/payment-form-dialog";
 import { useState } from "react";
@@ -142,10 +142,12 @@ export default function StudentProfile() {
                         </div>
                         <div>
                           <p className="font-bold text-lg text-foreground">{formatCurrency(payment.amount, payment.currency)}</p>
-                          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                             <span className="font-mono bg-muted px-2 py-0.5 rounded">{payment.receiptNumber}</span>
                             <span>•</span>
                             <span>{payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd, yyyy') : ''}</span>
+                            {payment.term && <><span>•</span><span>{payment.term}</span></>}
+                            {payment.feeType && <><span>•</span><span>{payment.feeType}</span></>}
                           </div>
                           {payment.notes && <p className="text-sm mt-2 text-muted-foreground italic">"{payment.notes}"</p>}
                         </div>

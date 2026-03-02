@@ -75,11 +75,21 @@ export async function registerRoutes(
 
   app.post(api.payments.create.path, async (req, res) => {
     try {
-      // Coerce amount to a number if it's not already
       const input = api.payments.create.input.extend({
         amount: z.coerce.number(),
         studentId: z.coerce.number()
       }).parse(req.body);
+
+      if (input.feeType === "SSCSE Fee") {
+        const student = await storage.getStudent(input.studentId);
+        if (!student || student.classGrade !== "Senior 4") {
+          return res.status(400).json({
+            message: "SSCSE Fee is only available for Senior 4 students",
+            field: "feeType",
+          });
+        }
+      }
+
       const payment = await storage.createPayment(input);
       res.status(201).json(payment);
     } catch (err) {
@@ -101,7 +111,7 @@ export async function registerRoutes(
         const student1 = await storage.createStudent({
           admissionNumber: "ADM001",
           fullName: "Alice Johnson",
-          classGrade: "Grade 5",
+          classGrade: "Senior 1",
           academicYear: "2023/2024",
           parentPhoneNumber: "+254700000001",
           status: "Active",
@@ -112,7 +122,7 @@ export async function registerRoutes(
         const student2 = await storage.createStudent({
           admissionNumber: "ADM002",
           fullName: "Bob Smith",
-          classGrade: "Grade 6",
+          classGrade: "Senior 4",
           academicYear: "2023/2024",
           parentPhoneNumber: "+254700000002",
           status: "Active",
@@ -124,6 +134,8 @@ export async function registerRoutes(
           studentId: student1.id,
           amount: 25000,
           currency: "UGX",
+          term: "Term 1",
+          feeType: "Tuition Fee",
           receiptNumber: "RCPT001",
           recordedBy: "Admin",
           notes: "First installment"

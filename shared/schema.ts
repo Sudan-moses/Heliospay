@@ -24,9 +24,11 @@ export const payments = pgTable("payments", {
   studentId: integer("student_id").notNull().references(() => students.id),
   amount: integer("amount").notNull(),
   currency: text("currency").notNull().default("UGX"),
+  term: text("term").notNull().default("Term 1"),
+  feeType: text("fee_type").notNull().default("Tuition Fee"),
   paymentDate: timestamp("payment_date").defaultNow(),
   receiptNumber: text("receipt_number").notNull().unique(),
-  recordedBy: text("recorded_by").notNull(), // user email or ID
+  recordedBy: text("recorded_by").notNull(),
   notes: text("notes"),
 });
 

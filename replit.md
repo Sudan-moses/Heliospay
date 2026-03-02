@@ -12,9 +12,10 @@ A web-based School Payment Recording System for private primary and secondary sc
 ## Key Features
 
 - Two roles: Admin (full access) and Bursar (record payments / view only)
-- Student CRUD management
-- Payment recording with auto-generated receipt numbers
-- Printable receipts
+- Student CRUD management with class levels: Senior 1, Senior 2, Senior 3, Senior 4
+- Payment recording by term (Term 1, 2, 3) and fee type (Tuition, Admission, Uniform, Boarding)
+- SSCSE Fee option available exclusively for Senior 4 students (enforced on backend)
+- Auto-generated receipt numbers and printable receipts (include term and fee type)
 - Dashboard with charts and financial metrics
 - Multi-currency support: UGX (Ugandan Shillings) and USD
 
