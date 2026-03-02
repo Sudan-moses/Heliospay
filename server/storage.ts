@@ -3,6 +3,9 @@ import {
   students,
   payments,
   expenses,
+  teachers,
+  payrolls,
+  payrollItems,
   type Student,
   type InsertStudent,
   type Payment,
@@ -10,8 +13,14 @@ import {
   type UpdateStudentRequest,
   type Expense,
   type InsertExpense,
+  type Teacher,
+  type InsertTeacher,
+  type Payroll,
+  type InsertPayroll,
+  type PayrollItem,
+  type PayrollWithItems,
 } from "@shared/schema";
-import { eq, desc, ilike, or } from "drizzle-orm";
+import { eq, desc, ilike, or, sum } from "drizzle-orm";
 
 export interface IStorage {
   getStudents(search?: string): Promise<(Student & { totalPaid: number; remainingBalance: number })[]>;
@@ -26,6 +35,18 @@ export interface IStorage {
   getExpenses(): Promise<Expense[]>;
   createExpense(expense: InsertExpense): Promise<Expense>;
   deleteExpense(id: number): Promise<void>;
+
+  getTeachers(): Promise<Teacher[]>;
+  getTeacher(id: number): Promise<Teacher | undefined>;
+  createTeacher(teacher: InsertTeacher): Promise<Teacher>;
+  updateTeacher(id: number, teacher: Partial<InsertTeacher>): Promise<Teacher>;
+  deleteTeacher(id: number): Promise<void>;
+
+  getPayrolls(): Promise<Payroll[]>;
+  getPayroll(id: number): Promise<PayrollWithItems | undefined>;
+  createPayroll(data: InsertPayroll): Promise<PayrollWithItems>;
+  updatePayrollStatus(id: number, status: string, approvedBy?: string): Promise<Payroll>;
+  deletePayroll(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -113,6 +134,99 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExpense(id: number): Promise<void> {
     await db.delete(expenses).where(eq(expenses.id, id));
+  }
+
+  async getTeachers(): Promise<Teacher[]> {
+    return await db.select().from(teachers).orderBy(desc(teachers.createdAt));
+  }
+
+  async getTeacher(id: number): Promise<Teacher | undefined> {
+    const [teacher] = await db.select().from(teachers).where(eq(teachers.id, id));
+    return teacher;
+  }
+
+  async createTeacher(teacherData: InsertTeacher): Promise<Teacher> {
+    const [teacher] = await db.insert(teachers).values(teacherData).returning();
+    return teacher;
+  }
+
+  async updateTeacher(id: number, updates: Partial<InsertTeacher>): Promise<Teacher> {
+    const [updated] = await db.update(teachers).set(updates).where(eq(teachers.id, id)).returning();
+    return updated;
+  }
+
+  async deleteTeacher(id: number): Promise<void> {
+    await db.delete(payrollItems).where(eq(payrollItems.teacherId, id));
+    await db.delete(teachers).where(eq(teachers.id, id));
+  }
+
+  async getPayrolls(): Promise<Payroll[]> {
+    return await db.select().from(payrolls).orderBy(desc(payrolls.createdAt));
+  }
+
+  async getPayroll(id: number): Promise<PayrollWithItems | undefined> {
+    const [payroll] = await db.select().from(payrolls).where(eq(payrolls.id, id));
+    if (!payroll) return undefined;
+
+    const items = await db.select().from(payrollItems).where(eq(payrollItems.payrollId, id));
+    const allTeachers = await db.select().from(teachers);
+
+    const itemsWithNames = items.map(item => ({
+      ...item,
+      teacherName: allTeachers.find(t => t.id === item.teacherId)?.fullName || "Unknown",
+    }));
+
+    return { ...payroll, items: itemsWithNames };
+  }
+
+  async createPayroll(data: InsertPayroll): Promise<PayrollWithItems> {
+    const activeTeachers = await db.select().from(teachers).where(eq(teachers.status, "Active"));
+    const payrollCurrency = data.currency || "UGX";
+    const eligibleTeachers = activeTeachers.filter(t => t.baseSalary > 0 && t.currency === payrollCurrency);
+
+    const totalAmount = eligibleTeachers.reduce((sum, t) => sum + t.baseSalary, 0);
+
+    const [payroll] = await db.insert(payrolls).values({
+      month: data.month,
+      status: "Draft",
+      createdBy: data.createdBy,
+      totalAmount,
+      currency: payrollCurrency,
+    }).returning();
+
+    const itemsToInsert = eligibleTeachers.map(t => ({
+      payrollId: payroll.id,
+      teacherId: t.id,
+      amount: t.baseSalary,
+      currency: t.currency,
+    }));
+
+    let insertedItems: PayrollItem[] = [];
+    if (itemsToInsert.length > 0) {
+      insertedItems = await db.insert(payrollItems).values(itemsToInsert).returning();
+    }
+
+    const itemsWithNames = insertedItems.map(item => ({
+      ...item,
+      teacherName: eligibleTeachers.find(t => t.id === item.teacherId)?.fullName || "Unknown",
+    }));
+
+    return { ...payroll, items: itemsWithNames };
+  }
+
+  async updatePayrollStatus(id: number, status: string, approvedBy?: string): Promise<Payroll> {
+    const updates: any = { status };
+    if (approvedBy) {
+      updates.approvedBy = approvedBy;
+      updates.approvedAt = new Date();
+    }
+    const [updated] = await db.update(payrolls).set(updates).where(eq(payrolls.id, id)).returning();
+    return updated;
+  }
+
+  async deletePayroll(id: number): Promise<void> {
+    await db.delete(payrollItems).where(eq(payrollItems.payrollId, id));
+    await db.delete(payrolls).where(eq(payrolls.id, id));
   }
 }
 

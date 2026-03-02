@@ -134,6 +134,101 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // Teacher routes
+  app.use('/api/teachers', isAuthenticated);
+
+  app.get(api.teachers.list.path, async (req, res) => {
+    const teachersList = await storage.getTeachers();
+    res.json(teachersList);
+  });
+
+  app.post(api.teachers.create.path, async (req, res) => {
+    try {
+      const input = api.teachers.create.input.extend({
+        baseSalary: z.coerce.number().min(0),
+      }).parse(req.body);
+      const teacher = await storage.createTeacher(input);
+      res.status(201).json(teacher);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.teachers.update.path, async (req, res) => {
+    try {
+      const input = api.teachers.update.input.extend({
+        baseSalary: z.coerce.number().min(0).optional(),
+      }).parse(req.body);
+      const teacher = await storage.updateTeacher(Number(req.params.id), input);
+      res.json(teacher);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.teachers.delete.path, async (req, res) => {
+    await storage.deleteTeacher(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  // Payroll routes
+  app.use('/api/payrolls', isAuthenticated);
+
+  app.get(api.payrolls.list.path, async (req, res) => {
+    const payrollsList = await storage.getPayrolls();
+    res.json(payrollsList);
+  });
+
+  app.get('/api/payrolls/:id', async (req, res) => {
+    const payroll = await storage.getPayroll(Number(req.params.id));
+    if (!payroll) return res.status(404).json({ message: "Payroll not found" });
+    res.json(payroll);
+  });
+
+  app.post(api.payrolls.create.path, async (req, res) => {
+    try {
+      const input = api.payrolls.create.input.parse(req.body);
+      const payroll = await storage.createPayroll(input);
+      res.status(201).json(payroll);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.put('/api/payrolls/:id/approve', async (req, res) => {
+    const user = (req as any).user;
+    const role = user?.role || "Admin";
+    if (role !== "Admin") {
+      return res.status(403).json({ message: "Only Admin can approve payrolls" });
+    }
+    const payroll = await storage.updatePayrollStatus(Number(req.params.id), "Approved", user?.email || "Admin");
+    res.json(payroll);
+  });
+
+  app.put('/api/payrolls/:id/reject', async (req, res) => {
+    const user = (req as any).user;
+    const role = user?.role || "Admin";
+    if (role !== "Admin") {
+      return res.status(403).json({ message: "Only Admin can reject payrolls" });
+    }
+    const payroll = await storage.updatePayrollStatus(Number(req.params.id), "Rejected", user?.email || "Admin");
+    res.json(payroll);
+  });
+
+  app.delete('/api/payrolls/:id', async (req, res) => {
+    await storage.deletePayroll(Number(req.params.id));
+    res.status(204).send();
+  });
+
   // Seed initial data asynchronously after starting
   setTimeout(async () => {
     try {

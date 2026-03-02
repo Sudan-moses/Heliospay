@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet } from "lucide-react";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -22,6 +22,8 @@ const menuItems = [
   { title: "Students", url: "/students", icon: Users },
   { title: "Payments", url: "/payments", icon: CreditCard },
   { title: "Expenses", url: "/expenses", icon: Receipt },
+  { title: "Teachers", url: "/teachers", icon: UserCheck },
+  { title: "Payroll", url: "/payroll", icon: Wallet },
 ];
 
 function AppSidebar() {

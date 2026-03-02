@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -42,8 +42,58 @@ export const expenses = pgTable("expenses", {
   recordedBy: text("recorded_by").notNull(),
 });
 
+export const teachers = pgTable("teachers", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  subjects: text("subjects").array().notNull(),
+  baseSalary: integer("base_salary").notNull().default(0),
+  currency: text("currency").notNull().default("UGX"),
+  status: text("status").notNull().default("Active"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const payrolls = pgTable("payrolls", {
+  id: serial("id").primaryKey(),
+  month: text("month").notNull(),
+  status: text("status").notNull().default("Draft"),
+  totalAmount: integer("total_amount").notNull().default(0),
+  currency: text("currency").notNull().default("UGX"),
+  createdBy: text("created_by").notNull(),
+  approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const payrollItems = pgTable("payroll_items", {
+  id: serial("id").primaryKey(),
+  payrollId: integer("payroll_id").notNull().references(() => payrolls.id),
+  teacherId: integer("teacher_id").notNull().references(() => teachers.id),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("UGX"),
+});
+
 export const studentsRelations = relations(students, ({ many }) => ({
   payments: many(payments),
+}));
+
+export const teachersRelations = relations(teachers, ({ many }) => ({
+  payrollItems: many(payrollItems),
+}));
+
+export const payrollsRelations = relations(payrolls, ({ many }) => ({
+  items: many(payrollItems),
+}));
+
+export const payrollItemsRelations = relations(payrollItems, ({ one }) => ({
+  payroll: one(payrolls, {
+    fields: [payrollItems.payrollId],
+    references: [payrolls.id],
+  }),
+  teacher: one(teachers, {
+    fields: [payrollItems.teacherId],
+    references: [teachers.id],
+  }),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
@@ -70,6 +120,18 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true,
 
 export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+
+export const insertTeacherSchema = createInsertSchema(teachers).omit({ id: true, createdAt: true });
+export const insertPayrollSchema = createInsertSchema(payrolls).omit({ id: true, totalAmount: true, approvedBy: true, approvedAt: true, createdAt: true });
+
+export type Teacher = typeof teachers.$inferSelect;
+export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
+
+export type Payroll = typeof payrolls.$inferSelect;
+export type InsertPayroll = z.infer<typeof insertPayrollSchema>;
+
+export type PayrollItem = typeof payrollItems.$inferSelect;
+export type PayrollWithItems = Payroll & { items: (PayrollItem & { teacherName: string })[] };
 
 export type CreatePaymentRequest = InsertPayment;
 export type PaymentResponse = Payment & { studentName?: string };

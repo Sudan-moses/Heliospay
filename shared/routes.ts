@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertStudentSchema, insertPaymentSchema, insertExpenseSchema, students, payments, expenses } from './schema';
+import { insertStudentSchema, insertPaymentSchema, insertExpenseSchema, insertTeacherSchema, insertPayrollSchema, students, payments, expenses, teachers, payrolls, payrollItems } from './schema';
 
 export const errorSchemas = {
   validation: z.object({ message: z.string(), field: z.string().optional() }),
@@ -95,6 +95,85 @@ export const api = {
         204: z.void(),
         404: errorSchemas.notFound,
       },
+    },
+  },
+  teachers: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/teachers' as const,
+      responses: {
+        200: z.array(z.custom<typeof teachers.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/teachers' as const,
+      input: insertTeacherSchema,
+      responses: {
+        201: z.custom<typeof teachers.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/teachers/:id' as const,
+      input: insertTeacherSchema.partial(),
+      responses: {
+        200: z.custom<typeof teachers.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/teachers/:id' as const,
+      responses: { 204: z.void() },
+    },
+  },
+  payrolls: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/payrolls' as const,
+      responses: {
+        200: z.array(z.custom<typeof payrolls.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/payrolls/:id' as const,
+      responses: {
+        200: z.custom<any>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/payrolls' as const,
+      input: insertPayrollSchema,
+      responses: {
+        201: z.custom<any>(),
+        400: errorSchemas.validation,
+      },
+    },
+    approve: {
+      method: 'PUT' as const,
+      path: '/api/payrolls/:id/approve' as const,
+      responses: {
+        200: z.custom<typeof payrolls.$inferSelect>(),
+        403: errorSchemas.unauthorized,
+      },
+    },
+    reject: {
+      method: 'PUT' as const,
+      path: '/api/payrolls/:id/reject' as const,
+      responses: {
+        200: z.custom<typeof payrolls.$inferSelect>(),
+        403: errorSchemas.unauthorized,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/payrolls/:id' as const,
+      responses: { 204: z.void() },
     },
   },
 };
