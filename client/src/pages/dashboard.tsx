@@ -1,14 +1,35 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CreditCard, AlertCircle, Wallet } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, CreditCard, AlertCircle, Wallet, TrendingUp, TrendingDown } from "lucide-react";
 import { useStudents } from "@/hooks/use-students";
 import { usePayments } from "@/hooks/use-payments";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subDays, parseISO } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const [selectedTerm, setSelectedTerm] = useState("Term 1");
   const { data: students, isLoading: loadingStudents } = useStudents();
   const { data: payments, isLoading: loadingPayments } = usePayments();
+
+  const showFinancialHealth = user?.role === "Admin" || user?.role === "Principal";
+
+  const { data: financialSummary, isLoading: loadingFinancial } = useQuery<{
+    totalIncome: { UGX: number; USD: number };
+    totalExpenses: { UGX: number; USD: number };
+    netBalance: { UGX: number; USD: number };
+    period: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    queryKey: [`/api/reports/financial-summary?period=termly&term=${encodeURIComponent(selectedTerm)}`],
+    enabled: showFinancialHealth,
+  });
 
   if (loadingStudents || loadingPayments) {
     return <div className="h-[50vh] flex items-center justify-center"><div className="animate-pulse flex flex-col items-center"><div className="h-8 w-8 bg-primary rounded-full animate-bounce" /><p className="mt-4 text-muted-foreground font-medium">Loading Dashboard...</p></div></div>;
@@ -142,6 +163,109 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {showFinancialHealth && (
+        <div data-testid="section-financial-health">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <h2 className="text-lg font-display font-bold text-foreground">Term Financial Health</h2>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+              <SelectTrigger className="w-[140px]" data-testid="select-term-financial">
+                <SelectValue placeholder="Select term" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Term 1">Term 1</SelectItem>
+                <SelectItem value="Term 2">Term 2</SelectItem>
+                <SelectItem value="Term 3">Term 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {loadingFinancial ? (
+            <Card className="shadow-sm border-border/50">
+              <CardContent className="p-6 space-y-4">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ) : financialSummary ? (
+            <Card className="shadow-sm border-border/50" data-testid="card-term-financial-health">
+              <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
+                <CardTitle className="text-lg font-display">Term Financial Health</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2" data-testid="financial-revenue">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Revenue</span>
+                    </div>
+                    <p className="text-xl font-bold text-foreground" data-testid="text-revenue-ugx">
+                      {formatCurrency(financialSummary.totalIncome.UGX, "UGX")}
+                    </p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-revenue-usd">
+                      {formatCurrency(financialSummary.totalIncome.USD, "USD")}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2" data-testid="financial-expenses">
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                      <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Expenses</span>
+                    </div>
+                    <p className="text-xl font-bold text-foreground" data-testid="text-expenses-ugx">
+                      {formatCurrency(financialSummary.totalExpenses.UGX, "UGX")}
+                    </p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-expenses-usd">
+                      {formatCurrency(financialSummary.totalExpenses.USD, "USD")}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2" data-testid="financial-net-profit">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Net Profit</span>
+                    </div>
+                    <p
+                      className={`text-xl font-bold ${financialSummary.netBalance.UGX >= 0 ? "text-emerald-600" : "text-destructive"}`}
+                      data-testid="text-net-profit-ugx"
+                    >
+                      {formatCurrency(financialSummary.netBalance.UGX, "UGX")}
+                    </p>
+                    <p
+                      className={`text-sm ${financialSummary.netBalance.USD >= 0 ? "text-emerald-600" : "text-destructive"}`}
+                      data-testid="text-net-profit-usd"
+                    >
+                      {formatCurrency(financialSummary.netBalance.USD, "USD")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-border/50">
+                  <p className="text-sm text-muted-foreground text-center" data-testid="text-profit-formula">
+                    <span className="font-medium text-foreground">Revenue</span>
+                    {" - "}
+                    <span className="font-medium text-foreground">Expenses</span>
+                    {" = "}
+                    <span className={`font-bold ${financialSummary.netBalance.UGX >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                      Net Profit
+                    </span>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="shadow-sm border-border/50">
+              <CardContent className="p-6">
+                <p className="text-center text-muted-foreground text-sm" data-testid="text-no-financial-data">
+                  No financial data available for {selectedTerm}.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }

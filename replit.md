@@ -11,18 +11,22 @@ A web-based School Payment Recording System for private primary and secondary sc
 
 ## Key Features
 
-- **RBAC**: Admin (full access), Bursar (Students, Payments, Expenses, Staff, Payroll, Verify Receipt), Principal (view-only: Dashboard, Students, Payments, Staff, Verify Receipt)
+- **RBAC**: Admin (full access), Bursar (Students, Payments, Expenses, Staff, Payroll, Reports, Budget, Verify Receipt), Principal (view-only: Dashboard, Students, Payments, Staff, Verify Receipt)
 - Student CRUD management with class levels: Senior 1–4
 - Payment recording by term (Term 1/2/3) and fee type (Tuition, Admission, Uniform, Boarding, SSCSE for Senior 4 only)
 - Auto-generated receipt numbers, printable receipts, PDF generation (jspdf, client-side)
 - Receipt verification page (public, no auth required)
-- Expense recording by category
+- Expense recording by category with term association
 - Staff management with two tabs: Teaching Staff and Non-Teaching Staff
 - Teacher salary breakdown: base + accommodation + transport + other allowances - deductions
 - Payroll generation from active teachers, approval workflow (Draft → Approved/Rejected)
+- **Financial Management Suite**:
+  - Reports page: Weekly/Monthly/Termly financial summaries with PDF export
+  - Budget tracking: Set term budgets by category, view budget vs actual comparison with variance
+  - Term Financial Health: Revenue - Expenses = Net Profit displayed on Dashboard (Admin/Principal)
 - Settings page: School Branding (name, address, logo) — appears in all PDF headers
 - User management (admin only): view all users, change roles
-- Dashboard with charts and financial metrics
+- Dashboard with charts, financial metrics, and Term Financial Health snapshot
 - Multi-currency support: UGX and USD
 
 ## Database Tables
@@ -37,6 +41,7 @@ A web-based School Payment Recording System for private primary and secondary sc
 - `payroll_items` — Individual payroll line items
 - `branding_settings` — School name, address, logo (single row)
 - `non_teaching_staff` — Non-teaching staff records
+- `budgets` — Term budget items by category (term, academicYear, category, estimatedAmount, currency)
 
 ## Important Files
 
@@ -57,6 +62,10 @@ A web-based School Payment Recording System for private primary and secondary sc
 - `client/src/hooks/use-teachers.ts` — Teacher data hooks
 - `client/src/hooks/use-payrolls.ts` — Payroll data hooks
 - `client/src/hooks/use-expenses.ts` — Expense data hooks
+- `client/src/hooks/use-budgets.ts` — Budget CRUD and comparison hooks
+- `client/src/pages/reports/index.tsx` — Financial reports page (Weekly/Monthly/Termly)
+- `client/src/pages/budget/index.tsx` — Budget tracking page
+- `client/src/lib/pdf-reports.ts` — Financial report PDF generator
 - `client/src/lib/utils.ts` — Utility functions including `formatCurrency()`
 
 ## Running

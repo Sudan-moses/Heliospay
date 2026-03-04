@@ -8,6 +8,7 @@ import {
   payrollItems,
   brandingSettings,
   nonTeachingStaff,
+  budgets,
   type Student,
   type InsertStudent,
   type Payment,
@@ -25,8 +26,10 @@ import {
   type InsertBranding,
   type NonTeachingStaff,
   type InsertNonTeachingStaff,
+  type Budget,
+  type InsertBudget,
 } from "@shared/schema";
-import { eq, desc, ilike, or, sum } from "drizzle-orm";
+import { eq, desc, ilike, or, sum, and, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   getStudents(search?: string): Promise<(Student & { totalPaid: number; remainingBalance: number })[]>;
@@ -63,6 +66,19 @@ export interface IStorage {
   deleteNonTeachingStaff(id: number): Promise<void>;
 
   getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string }) | undefined>;
+
+  getBudgets(term?: string, academicYear?: string): Promise<Budget[]>;
+  createBudget(data: InsertBudget): Promise<Budget>;
+  updateBudget(id: number, data: Partial<InsertBudget>): Promise<Budget>;
+  deleteBudget(id: number): Promise<void>;
+
+  getFinancialSummary(startDate: Date, endDate: Date, term?: string): Promise<{
+    totalIncome: { UGX: number; USD: number };
+    totalExpenses: { UGX: number; USD: number };
+    netBalance: { UGX: number; USD: number };
+    expensesByCategory: { category: string; amount: number; currency: string }[];
+    incomeByFeeType: { feeType: string; amount: number; currency: string }[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -293,6 +309,92 @@ export class DatabaseStorage implements IStorage {
       studentName: student?.fullName || "Unknown",
       studentAdmissionNumber: student?.admissionNumber || "N/A",
       studentClassGrade: student?.classGrade || "N/A",
+    };
+  }
+
+  async getBudgets(term?: string, academicYear?: string): Promise<Budget[]> {
+    const conditions = [];
+    if (term) conditions.push(eq(budgets.term, term));
+    if (academicYear) conditions.push(eq(budgets.academicYear, academicYear));
+    if (conditions.length > 0) {
+      return await db.select().from(budgets).where(and(...conditions)).orderBy(budgets.category);
+    }
+    return await db.select().from(budgets).orderBy(desc(budgets.createdAt));
+  }
+
+  async createBudget(data: InsertBudget): Promise<Budget> {
+    const [budget] = await db.insert(budgets).values(data).returning();
+    return budget;
+  }
+
+  async updateBudget(id: number, data: Partial<InsertBudget>): Promise<Budget> {
+    const [updated] = await db.update(budgets).set({ ...data, updatedAt: new Date() }).where(eq(budgets.id, id)).returning();
+    return updated;
+  }
+
+  async deleteBudget(id: number): Promise<void> {
+    await db.delete(budgets).where(eq(budgets.id, id));
+  }
+
+  async getFinancialSummary(startDate: Date, endDate: Date, term?: string): Promise<{
+    totalIncome: { UGX: number; USD: number };
+    totalExpenses: { UGX: number; USD: number };
+    netBalance: { UGX: number; USD: number };
+    expensesByCategory: { category: string; amount: number; currency: string }[];
+    incomeByFeeType: { feeType: string; amount: number; currency: string }[];
+  }> {
+    const paymentConditions = [gte(payments.paymentDate, startDate), lte(payments.paymentDate, endDate)];
+    if (term) paymentConditions.push(eq(payments.term, term));
+    const allPayments = await db.select().from(payments).where(and(...paymentConditions));
+
+    const expenseConditions = [gte(expenses.expenseDate, startDate), lte(expenses.expenseDate, endDate)];
+    if (term) expenseConditions.push(eq(expenses.term, term));
+    const allExpenses = await db.select().from(expenses).where(and(...expenseConditions));
+
+    const totalIncome = { UGX: 0, USD: 0 };
+    const totalExpenses = { UGX: 0, USD: 0 };
+
+    allPayments.forEach(p => {
+      if (p.currency === "USD") totalIncome.USD += p.amount;
+      else totalIncome.UGX += p.amount;
+    });
+
+    allExpenses.forEach(e => {
+      if (e.currency === "USD") totalExpenses.USD += e.amount;
+      else totalExpenses.UGX += e.amount;
+    });
+
+    const expenseByCatMap = new Map<string, { amount: number; currency: string }>();
+    allExpenses.forEach(e => {
+      const key = `${e.category}-${e.currency}`;
+      const existing = expenseByCatMap.get(key);
+      if (existing) existing.amount += e.amount;
+      else expenseByCatMap.set(key, { amount: e.amount, currency: e.currency });
+    });
+
+    const incomeByCatMap = new Map<string, { amount: number; currency: string }>();
+    allPayments.forEach(p => {
+      const key = `${p.feeType}-${p.currency}`;
+      const existing = incomeByCatMap.get(key);
+      if (existing) existing.amount += p.amount;
+      else incomeByCatMap.set(key, { amount: p.amount, currency: p.currency });
+    });
+
+    return {
+      totalIncome,
+      totalExpenses,
+      netBalance: {
+        UGX: totalIncome.UGX - totalExpenses.UGX,
+        USD: totalIncome.USD - totalExpenses.USD,
+      },
+      expensesByCategory: Array.from(expenseByCatMap.entries()).map(([k, v]) => ({
+        category: k.split("-")[0],
+        ...v,
+      })),
+      incomeByFeeType: Array.from(incomeByCatMap.entries()).map(([k, v]) => ({
+        feeType: k.split("-")[0],
+        ...v,
+      })),
     };
   }
 }

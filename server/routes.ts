@@ -5,7 +5,8 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
-import { insertBrandingSchema, insertNonTeachingStaffSchema } from "@shared/schema";
+import { insertBrandingSchema, insertNonTeachingStaffSchema, insertBudgetSchema } from "@shared/schema";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -352,6 +353,105 @@ export async function registerRoutes(
     }
     const user = await authStorage.updateUserRole(req.params.id, role);
     res.json(user);
+  });
+
+  // Budget routes
+  app.use('/api/budgets', isAuthenticated, blockSuspended);
+
+  app.get('/api/budgets', async (req, res) => {
+    const term = req.query.term as string | undefined;
+    const academicYear = req.query.academicYear as string | undefined;
+    const budgetList = await storage.getBudgets(term, academicYear);
+    res.json(budgetList);
+  });
+
+  app.post('/api/budgets', canModify, async (req, res) => {
+    try {
+      const input = insertBudgetSchema.extend({
+        estimatedAmount: z.coerce.number().min(0),
+      }).parse(req.body);
+      const budget = await storage.createBudget(input);
+      res.status(201).json(budget);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.put('/api/budgets/:id', canModify, async (req, res) => {
+    try {
+      const input = insertBudgetSchema.partial().extend({
+        estimatedAmount: z.coerce.number().min(0).optional(),
+      }).parse(req.body);
+      const budget = await storage.updateBudget(Number(req.params.id), input);
+      res.json(budget);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.delete('/api/budgets/:id', canModify, async (req, res) => {
+    await storage.deleteBudget(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  // Financial reports
+  app.get('/api/reports/financial-summary', isAuthenticated, blockSuspended, async (req, res) => {
+    const period = req.query.period as string || "monthly";
+    const term = req.query.term as string | undefined;
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    if (period === "weekly") {
+      startDate = startOfWeek(now, { weekStartsOn: 1 });
+      endDate = endOfWeek(now, { weekStartsOn: 1 });
+    } else if (period === "termly") {
+      startDate = new Date(now.getFullYear(), 0, 1);
+      endDate = new Date(now.getFullYear(), 11, 31);
+    } else {
+      startDate = startOfMonth(now);
+      endDate = endOfMonth(now);
+    }
+
+    if (req.query.startDate) startDate = new Date(req.query.startDate as string);
+    if (req.query.endDate) endDate = new Date(req.query.endDate as string);
+
+    const summary = await storage.getFinancialSummary(startDate, endDate, term);
+    res.json({ ...summary, period, startDate: startDate.toISOString(), endDate: endDate.toISOString() });
+  });
+
+  // Budget vs Expenditure comparison
+  app.get('/api/reports/budget-vs-actual', isAuthenticated, blockSuspended, async (req, res) => {
+    const term = req.query.term as string || "Term 1";
+    const academicYear = req.query.academicYear as string || "2023/2024";
+
+    const termBudgets = await storage.getBudgets(term, academicYear);
+    const [startYear] = academicYear.split("/").map(Number);
+    const yearStart = new Date(startYear, 0, 1);
+    const yearEnd = new Date(startYear + 1, 11, 31);
+    const allExpenses = await storage.getFinancialSummary(yearStart, yearEnd, term);
+
+    const comparison = termBudgets.map(b => {
+      const actual = allExpenses.expensesByCategory
+        .filter(e => e.category === b.category && e.currency === b.currency)
+        .reduce((sum, e) => sum + e.amount, 0);
+      return {
+        category: b.category,
+        currency: b.currency,
+        estimated: b.estimatedAmount,
+        actual,
+        variance: b.estimatedAmount - actual,
+        status: actual > b.estimatedAmount ? "Over Budget" : actual === b.estimatedAmount ? "On Budget" : "Under Budget",
+      };
+    });
+
+    res.json(comparison);
   });
 
   // Seed initial data asynchronously after starting

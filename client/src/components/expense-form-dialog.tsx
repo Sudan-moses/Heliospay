@@ -13,12 +13,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
 const EXPENSE_CATEGORIES = ["Rent", "Maintenance", "Security", "Salaries", "Utilities", "Supplies", "Transport", "Other"];
+const TERMS = ["Term 1", "Term 2", "Term 3"];
 
 const formSchema = insertExpenseSchema.extend({
   amount: z.coerce.number().min(1, "Amount must be at least 1"),
   category: z.string().min(1, "Please select a category"),
   description: z.string().min(1, "Please enter a description"),
   currency: z.string().min(1, "Please select a currency"),
+  term: z.string().min(1, "Please select a term"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -41,6 +43,7 @@ export function ExpenseFormDialog({
       description: "",
       amount: 0,
       currency: "UGX",
+      term: "Term 1",
       recordedBy: user?.email || "Unknown",
     },
   });
@@ -84,6 +87,29 @@ export function ExpenseFormDialog({
                       <SelectContent>
                         {EXPENSE_CATEGORIES.map((cat) => (
                           <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="term"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Term</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11" data-testid="select-expense-term">
+                          <SelectValue placeholder="Select term" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {TERMS.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

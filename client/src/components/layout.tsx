@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet, ShieldCheck, Settings } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet, ShieldCheck, Settings, BarChart3, PiggyBank } from "lucide-react";
 import { Button } from "./ui/button";
 
 type UserRole = "Admin" | "Bursar" | "Principal" | "Suspended";
@@ -26,6 +26,8 @@ const menuItems = [
   { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["Admin", "Bursar"] as UserRole[] },
   { title: "Staff", url: "/staff", icon: UserCheck, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
   { title: "Payroll", url: "/payroll", icon: Wallet, roles: ["Admin", "Bursar"] as UserRole[] },
+  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["Admin", "Bursar"] as UserRole[] },
+  { title: "Budget", url: "/budget", icon: PiggyBank, roles: ["Admin", "Bursar"] as UserRole[] },
   { title: "Verify Receipt", url: "/verify-receipt", icon: ShieldCheck, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
 ];
 

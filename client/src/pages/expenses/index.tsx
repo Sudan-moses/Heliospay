@@ -86,6 +86,7 @@ export default function ExpensesPage() {
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-semibold text-foreground">Date</TableHead>
               <TableHead className="font-semibold text-foreground">Category</TableHead>
+              <TableHead className="font-semibold text-foreground">Term</TableHead>
               <TableHead className="font-semibold text-foreground">Description</TableHead>
               <TableHead className="font-semibold text-foreground">Recorded By</TableHead>
               <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
@@ -95,11 +96,11 @@ export default function ExpensesPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">Loading expenses...</TableCell>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">Loading expenses...</TableCell>
               </TableRow>
             ) : filteredExpenses?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">No expenses found.</TableCell>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">No expenses found.</TableCell>
               </TableRow>
             ) : (
               filteredExpenses?.map((expense) => (
@@ -112,6 +113,7 @@ export default function ExpensesPage() {
                       {expense.category}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{expense.term || "—"}</TableCell>
                   <TableCell className="font-medium text-foreground max-w-xs truncate">{expense.description}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{expense.recordedBy}</TableCell>
                   <TableCell className="text-right">

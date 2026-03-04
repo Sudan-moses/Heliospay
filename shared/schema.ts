@@ -38,6 +38,7 @@ export const expenses = pgTable("expenses", {
   description: text("description").notNull(),
   amount: integer("amount").notNull(),
   currency: text("currency").notNull().default("UGX"),
+  term: text("term").notNull().default("Term 1"),
   expenseDate: timestamp("expense_date").defaultNow(),
   recordedBy: text("recorded_by").notNull(),
 });
@@ -170,3 +171,19 @@ export type InsertBranding = z.infer<typeof insertBrandingSchema>;
 
 export type NonTeachingStaff = typeof nonTeachingStaff.$inferSelect;
 export type InsertNonTeachingStaff = z.infer<typeof insertNonTeachingStaffSchema>;
+
+export const budgets = pgTable("budgets", {
+  id: serial("id").primaryKey(),
+  term: text("term").notNull(),
+  academicYear: text("academic_year").notNull(),
+  category: text("category").notNull(),
+  estimatedAmount: integer("estimated_amount").notNull().default(0),
+  currency: text("currency").notNull().default("UGX"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertBudgetSchema = createInsertSchema(budgets).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type Budget = typeof budgets.$inferSelect;
+export type InsertBudget = z.infer<typeof insertBudgetSchema>;
