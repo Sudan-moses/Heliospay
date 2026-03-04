@@ -14,21 +14,27 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet, ShieldCheck, Settings } from "lucide-react";
 import { Button } from "./ui/button";
 
+type UserRole = "Admin" | "Bursar" | "Principal" | "Suspended";
+
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Students", url: "/students", icon: Users },
-  { title: "Payments", url: "/payments", icon: CreditCard },
-  { title: "Expenses", url: "/expenses", icon: Receipt },
-  { title: "Teachers", url: "/teachers", icon: UserCheck },
-  { title: "Payroll", url: "/payroll", icon: Wallet },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
+  { title: "Students", url: "/students", icon: Users, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
+  { title: "Payments", url: "/payments", icon: CreditCard, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
+  { title: "Expenses", url: "/expenses", icon: Receipt, roles: ["Admin", "Bursar"] as UserRole[] },
+  { title: "Staff", url: "/staff", icon: UserCheck, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
+  { title: "Payroll", url: "/payroll", icon: Wallet, roles: ["Admin", "Bursar"] as UserRole[] },
+  { title: "Verify Receipt", url: "/verify-receipt", icon: ShieldCheck, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
 ];
 
 function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+
+  const userRole = ((user as any)?.role || "Bursar") as UserRole;
+  const visibleItems = menuItems.filter((item) => item.roles.includes(userRole));
 
   return (
     <Sidebar>
@@ -47,7 +53,7 @@ function AppSidebar() {
           <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground/70">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {visibleItems.map((item) => {
                 const isActive = location === item.url || (item.url !== "/" && location.startsWith(item.url));
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -60,6 +66,16 @@ function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+              {userRole === "Admin" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/settings" || location.startsWith("/settings")} className="font-medium h-11">
+                    <Link href="/settings" className="flex items-center gap-3" data-testid="link-settings">
+                      <Settings className="h-5 w-5" />
+                      <span>Settings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -72,7 +88,7 @@ function AppSidebar() {
           </div>
           <div className="flex flex-col overflow-hidden">
             <span className="text-sm font-semibold truncate">{user?.firstName || "User"}</span>
-            <span className="text-xs text-muted-foreground capitalize">{(user as any)?.role || "Admin"}</span>
+            <span className="text-xs text-muted-foreground capitalize">{userRole}</span>
           </div>
         </div>
         <Button variant="outline" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={() => logout()}>

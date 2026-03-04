@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { usePayments } from "@/hooks/use-payments";
+import { useBranding } from "@/hooks/use-branding";
+import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,9 @@ import { Input } from "@/components/ui/input";
 
 export default function PaymentsPage() {
   const { data: payments, isLoading } = usePayments();
+  const { data: branding } = useBranding();
+  const { user } = useAuth();
+  const canEdit = (user as any)?.role !== "Principal";
   const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
   
@@ -39,16 +44,18 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <ReceiptPrint payment={printData?.payment} student={printData?.student} />
+      <ReceiptPrint payment={printData?.payment} student={printData?.student} branding={branding} />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">Transaction Log</h1>
           <p className="text-muted-foreground mt-1">View all recorded payments across the system</p>
         </div>
-        <Button onClick={() => setFormOpen(true)} className="hover-elevate shadow-lg shadow-primary/20 font-semibold h-11 px-6 bg-gradient-to-r from-primary to-primary/90">
-          <Plus className="mr-2 h-5 w-5" /> Record Payment
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setFormOpen(true)} className="hover-elevate shadow-lg shadow-primary/20 font-semibold h-11 px-6 bg-gradient-to-r from-primary to-primary/90">
+            <Plus className="mr-2 h-5 w-5" /> Record Payment
+          </Button>
+        )}
       </div>
 
       <Card className="shadow-md border-border/50 overflow-hidden">
@@ -109,7 +116,7 @@ export default function PaymentsPage() {
                       <Printer className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" title="Download PDF" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => {
-                      generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment));
+                      generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment), branding);
                     }}>
                       <FileDown className="h-4 w-4" />
                     </Button>

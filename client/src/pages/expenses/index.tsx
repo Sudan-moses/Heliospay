@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useExpenses, useDeleteExpense } from "@/hooks/use-expenses";
+import { useBranding } from "@/hooks/use-branding";
+import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,9 @@ const categoryColors: Record<string, string> = {
 
 export default function ExpensesPage() {
   const { data: expenses, isLoading } = useExpenses();
+  const { data: branding } = useBranding();
+  const { user } = useAuth();
+  const canEdit = (user as any)?.role !== "Principal";
   const deleteMutation = useDeleteExpense();
   const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -44,9 +49,11 @@ export default function ExpensesPage() {
           <h1 className="text-2xl font-display font-bold text-foreground" data-testid="text-expenses-title">Expenses</h1>
           <p className="text-muted-foreground mt-1">Track school operating costs and expenditures</p>
         </div>
-        <Button onClick={() => setFormOpen(true)} className="hover-elevate shadow-lg shadow-orange-500/20 font-semibold h-11 px-6 bg-gradient-to-r from-orange-600 to-orange-500" data-testid="button-record-expense">
-          <Plus className="mr-2 h-5 w-5" /> Record Expense
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setFormOpen(true)} className="hover-elevate shadow-lg shadow-orange-500/20 font-semibold h-11 px-6 bg-gradient-to-r from-orange-600 to-orange-500" data-testid="button-record-expense">
+            <Plus className="mr-2 h-5 w-5" /> Record Expense
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -117,23 +124,25 @@ export default function ExpensesPage() {
                       variant="ghost"
                       size="icon"
                       className="hover:text-blue-600"
-                      onClick={() => generateExpenseReceiptPDF(expense)}
+                      onClick={() => generateExpenseReceiptPDF(expense, branding)}
                       title="Download PDF"
                       data-testid={`button-pdf-expense-${expense.id}`}
                     >
                       <FileDown className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:text-red-600"
-                      onClick={() => deleteMutation.mutate(expense.id)}
-                      disabled={deleteMutation.isPending}
-                      title="Delete Expense"
-                      data-testid={`button-delete-expense-${expense.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:text-red-600"
+                        onClick={() => deleteMutation.mutate(expense.id)}
+                        disabled={deleteMutation.isPending}
+                        title="Delete Expense"
+                        data-testid={`button-delete-expense-${expense.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

@@ -12,8 +12,10 @@ import StudentsPage from "@/pages/students";
 import StudentProfile from "@/pages/students/[id]";
 import PaymentsPage from "@/pages/payments";
 import ExpensesPage from "@/pages/expenses";
-import TeachersPage from "@/pages/teachers";
+import StaffPage from "@/pages/staff";
 import PayrollPage from "@/pages/payroll";
+import SettingsPage from "@/pages/settings";
+import VerifyReceiptPage from "@/pages/verify-receipt";
 import { Layout } from "@/components/layout";
 import { Loader2 } from "lucide-react";
 
@@ -26,8 +28,10 @@ function ProtectedRoutes() {
         <Route path="/students/:id" component={StudentProfile}/>
         <Route path="/payments" component={PaymentsPage}/>
         <Route path="/expenses" component={ExpensesPage}/>
-        <Route path="/teachers" component={TeachersPage}/>
+        <Route path="/staff" component={StaffPage}/>
         <Route path="/payroll" component={PayrollPage}/>
+        <Route path="/verify-receipt" component={VerifyReceiptPage}/>
+        <Route path="/settings" component={SettingsPage}/>
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -45,11 +49,12 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthPage />;
-  }
-
-  return <ProtectedRoutes />;
+  return (
+    <Switch>
+      <Route path="/verify-receipt" component={VerifyReceiptPage} />
+      {!isAuthenticated ? <AuthPage /> : <ProtectedRoutes />}
+    </Switch>
+  );
 }
 
 function App() {

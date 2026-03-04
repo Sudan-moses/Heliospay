@@ -1,9 +1,11 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
+import { insertBrandingSchema, insertNonTeachingStaffSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -13,9 +15,39 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  // Require auth for API routes
-  app.use('/api/students', isAuthenticated);
-  app.use('/api/payments', isAuthenticated);
+  const isAdmin = async (req: any, res: Response, next: NextFunction) => {
+    const userId = req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const user = await authStorage.getUser(userId);
+    if (!user || user.role !== "Admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+  };
+
+  const canModify = async (req: any, res: Response, next: NextFunction) => {
+    const userId = req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const user = await authStorage.getUser(userId);
+    if (!user || user.role === "Principal" || user.role === "Suspended") {
+      return res.status(403).json({ message: "You do not have permission to perform this action" });
+    }
+    next();
+  };
+
+  const blockSuspended = async (req: any, res: Response, next: NextFunction) => {
+    const userId = req.user?.claims?.sub;
+    if (userId) {
+      const user = await authStorage.getUser(userId);
+      if (user?.role === "Suspended") {
+        return res.status(403).json({ message: "Your account has been suspended" });
+      }
+    }
+    next();
+  };
+
+  app.use('/api/students', isAuthenticated, blockSuspended);
+  app.use('/api/payments', isAuthenticated, blockSuspended);
 
   app.get(api.students.list.path, async (req, res) => {
     const search = req.query.search as string | undefined;
@@ -31,7 +63,7 @@ export async function registerRoutes(
     res.json(student);
   });
 
-  app.post(api.students.create.path, async (req, res) => {
+  app.post(api.students.create.path, canModify, async (req, res) => {
     try {
       const input = api.students.create.input.parse(req.body);
       const student = await storage.createStudent(input);
@@ -47,7 +79,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.students.update.path, async (req, res) => {
+  app.put(api.students.update.path, canModify, async (req, res) => {
     try {
       const input = api.students.update.input.parse(req.body);
       const student = await storage.updateStudent(Number(req.params.id), input);
@@ -63,7 +95,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.students.delete.path, async (req, res) => {
+  app.delete(api.students.delete.path, canModify, async (req, res) => {
     await storage.deleteStudent(Number(req.params.id));
     res.status(204).send();
   });
@@ -73,7 +105,7 @@ export async function registerRoutes(
     res.json(paymentsList);
   });
 
-  app.post(api.payments.create.path, async (req, res) => {
+  app.post(api.payments.create.path, canModify, async (req, res) => {
     try {
       const input = api.payments.create.input.extend({
         amount: z.coerce.number(),
@@ -104,14 +136,14 @@ export async function registerRoutes(
   });
 
   // Expenses routes
-  app.use('/api/expenses', isAuthenticated);
+  app.use('/api/expenses', isAuthenticated, blockSuspended);
 
   app.get(api.expenses.list.path, async (req, res) => {
     const expensesList = await storage.getExpenses();
     res.json(expensesList);
   });
 
-  app.post(api.expenses.create.path, async (req, res) => {
+  app.post(api.expenses.create.path, canModify, async (req, res) => {
     try {
       const input = api.expenses.create.input.extend({
         amount: z.coerce.number().min(1, "Amount must be at least 1"),
@@ -129,20 +161,20 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.expenses.delete.path, async (req, res) => {
+  app.delete(api.expenses.delete.path, canModify, async (req, res) => {
     await storage.deleteExpense(Number(req.params.id));
     res.status(204).send();
   });
 
   // Teacher routes
-  app.use('/api/teachers', isAuthenticated);
+  app.use('/api/teachers', isAuthenticated, blockSuspended);
 
   app.get(api.teachers.list.path, async (req, res) => {
     const teachersList = await storage.getTeachers();
     res.json(teachersList);
   });
 
-  app.post(api.teachers.create.path, async (req, res) => {
+  app.post(api.teachers.create.path, canModify, async (req, res) => {
     try {
       const input = api.teachers.create.input.extend({
         baseSalary: z.coerce.number().min(0),
@@ -161,7 +193,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.teachers.update.path, async (req, res) => {
+  app.put(api.teachers.update.path, canModify, async (req, res) => {
     try {
       const input = api.teachers.update.input.extend({
         baseSalary: z.coerce.number().min(0).optional(),
@@ -180,13 +212,13 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.teachers.delete.path, async (req, res) => {
+  app.delete(api.teachers.delete.path, canModify, async (req, res) => {
     await storage.deleteTeacher(Number(req.params.id));
     res.status(204).send();
   });
 
   // Payroll routes
-  app.use('/api/payrolls', isAuthenticated);
+  app.use('/api/payrolls', isAuthenticated, blockSuspended);
 
   app.get(api.payrolls.list.path, async (req, res) => {
     const payrollsList = await storage.getPayrolls();
@@ -199,7 +231,7 @@ export async function registerRoutes(
     res.json(payroll);
   });
 
-  app.post(api.payrolls.create.path, async (req, res) => {
+  app.post(api.payrolls.create.path, canModify, async (req, res) => {
     try {
       const input = api.payrolls.create.input.parse(req.body);
       const payroll = await storage.createPayroll(input);
@@ -212,29 +244,114 @@ export async function registerRoutes(
     }
   });
 
-  app.put('/api/payrolls/:id/approve', async (req, res) => {
-    const user = (req as any).user;
-    const role = user?.role || "Admin";
-    if (role !== "Admin") {
-      return res.status(403).json({ message: "Only Admin can approve payrolls" });
-    }
-    const payroll = await storage.updatePayrollStatus(Number(req.params.id), "Approved", user?.email || "Admin");
+  app.put('/api/payrolls/:id/approve', isAuthenticated, isAdmin, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const dbUser = await authStorage.getUser(userId);
+    const payroll = await storage.updatePayrollStatus(Number(req.params.id), "Approved", dbUser?.email || "Admin");
     res.json(payroll);
   });
 
-  app.put('/api/payrolls/:id/reject', async (req, res) => {
-    const user = (req as any).user;
-    const role = user?.role || "Admin";
-    if (role !== "Admin") {
-      return res.status(403).json({ message: "Only Admin can reject payrolls" });
-    }
-    const payroll = await storage.updatePayrollStatus(Number(req.params.id), "Rejected", user?.email || "Admin");
+  app.put('/api/payrolls/:id/reject', isAuthenticated, isAdmin, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const dbUser = await authStorage.getUser(userId);
+    const payroll = await storage.updatePayrollStatus(Number(req.params.id), "Rejected", dbUser?.email || "Admin");
     res.json(payroll);
   });
 
-  app.delete('/api/payrolls/:id', async (req, res) => {
+  app.delete('/api/payrolls/:id', canModify, async (req, res) => {
     await storage.deletePayroll(Number(req.params.id));
     res.status(204).send();
+  });
+
+  // Receipt verification (public — no auth needed)
+  app.get('/api/verify-receipt', async (req, res) => {
+    const receiptNumber = req.query.receiptNumber as string;
+    if (!receiptNumber) return res.status(400).json({ message: "Receipt number is required" });
+    const result = await storage.getPaymentByReceiptNumber(receiptNumber);
+    if (!result) return res.json({ valid: false });
+    const { studentName, studentAdmissionNumber, studentClassGrade, ...paymentData } = result;
+    res.json({
+      valid: true,
+      payment: paymentData,
+      student: { fullName: studentName, admissionNumber: studentAdmissionNumber, classGrade: studentClassGrade },
+    });
+  });
+
+  // Branding settings routes
+  app.get('/api/settings/branding', async (req, res) => {
+    const settings = await storage.getBrandingSettings();
+    res.json(settings || { schoolName: "HelioPay System", schoolAddress: "", logoUrl: null });
+  });
+
+  app.put('/api/settings/branding', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const input = insertBrandingSchema.parse(req.body);
+      const settings = await storage.updateBrandingSettings(input);
+      res.json(settings);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  // Non-teaching staff routes
+  app.use('/api/non-teaching-staff', isAuthenticated, blockSuspended);
+
+  app.get('/api/non-teaching-staff', async (req, res) => {
+    const staff = await storage.getNonTeachingStaff();
+    res.json(staff);
+  });
+
+  app.post('/api/non-teaching-staff', canModify, async (req, res) => {
+    try {
+      const input = insertNonTeachingStaffSchema.extend({
+        baseSalary: z.coerce.number().min(0),
+      }).parse(req.body);
+      const staff = await storage.createNonTeachingStaff(input);
+      res.status(201).json(staff);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.put('/api/non-teaching-staff/:id', canModify, async (req, res) => {
+    try {
+      const input = insertNonTeachingStaffSchema.partial().extend({
+        baseSalary: z.coerce.number().min(0).optional(),
+      }).parse(req.body);
+      const staff = await storage.updateNonTeachingStaff(Number(req.params.id), input);
+      res.json(staff);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.delete('/api/non-teaching-staff/:id', canModify, async (req, res) => {
+    await storage.deleteNonTeachingStaff(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  // User management routes (admin only)
+  app.get('/api/users', isAuthenticated, isAdmin, async (req, res) => {
+    const users = await authStorage.getUsers();
+    res.json(users);
+  });
+
+  app.put('/api/users/:id/role', isAuthenticated, isAdmin, async (req, res) => {
+    const { role } = req.body;
+    if (!["Admin", "Bursar", "Principal", "Suspended"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+    const user = await authStorage.updateUserRole(req.params.id, role);
+    res.json(user);
   });
 
   // Seed initial data asynchronously after starting

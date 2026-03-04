@@ -6,43 +6,57 @@ A web-based School Payment Recording System for private primary and secondary sc
 
 - **Frontend**: React + Vite, Shadcn UI, TanStack Query, Wouter routing
 - **Backend**: Express.js, Drizzle ORM, PostgreSQL
-- **Auth**: Replit Auth (sessions/users tables)
+- **Auth**: Replit Auth (sessions/users tables) with RBAC (Admin/Bursar/Principal/Suspended roles)
 - **Styling**: Tailwind CSS with dark mode support
 
 ## Key Features
 
-- Two roles: Admin (full access) and Bursar (record payments / view only)
-- Student CRUD management with class levels: Senior 1, Senior 2, Senior 3, Senior 4
-- Payment recording by term (Term 1, 2, 3) and fee type (Tuition, Admission, Uniform, Boarding)
-- SSCSE Fee option available exclusively for Senior 4 students (enforced on backend)
-- Auto-generated receipt numbers and printable receipts (include term and fee type)
-- PDF receipt generation for payments, expenses, and payroll (via jspdf, client-side)
-- Expense recording by category (Rent, Maintenance, Security, Salaries, Utilities, Supplies, Transport, Other)
-- Teacher management (name, phone, subjects, salary with allowances/deductions, status)
-- Payroll generation from active teachers, with approval workflow (Draft → Approved/Rejected)
+- **RBAC**: Admin (full access), Bursar (Students, Payments, Expenses, Staff, Payroll, Verify Receipt), Principal (view-only: Dashboard, Students, Payments, Staff, Verify Receipt)
+- Student CRUD management with class levels: Senior 1–4
+- Payment recording by term (Term 1/2/3) and fee type (Tuition, Admission, Uniform, Boarding, SSCSE for Senior 4 only)
+- Auto-generated receipt numbers, printable receipts, PDF generation (jspdf, client-side)
+- Receipt verification page (public, no auth required)
+- Expense recording by category
+- Staff management with two tabs: Teaching Staff and Non-Teaching Staff
+- Teacher salary breakdown: base + accommodation + transport + other allowances - deductions
+- Payroll generation from active teachers, approval workflow (Draft → Approved/Rejected)
+- Settings page: School Branding (name, address, logo) — appears in all PDF headers
+- User management (admin only): view all users, change roles
 - Dashboard with charts and financial metrics
-- Multi-currency support: UGX (Ugandan Shillings) and USD
+- Multi-currency support: UGX and USD
+
+## Database Tables
+
+- `users` — Replit Auth users with role column (Admin/Bursar/Principal/Suspended)
+- `sessions` — Replit Auth sessions
+- `students` — Student records
+- `payments` — Payment records with receipt numbers
+- `expenses` — Expense records
+- `teachers` — Teaching staff with salary breakdown
+- `payrolls` — Payroll headers
+- `payroll_items` — Individual payroll line items
+- `branding_settings` — School name, address, logo (single row)
+- `non_teaching_staff` — Non-teaching staff records
 
 ## Important Files
 
 - `shared/schema.ts` — Drizzle schema and Zod validation
-- `server/routes.ts` — API routes
+- `shared/models/auth.ts` — User/Session tables (mandatory for Replit Auth)
+- `server/routes.ts` — API routes with isAdmin/canModify middleware
 - `server/storage.ts` — Storage interface and DB implementation
-- `client/src/pages/dashboard.tsx` — Dashboard with metrics and charts
-- `client/src/components/layout.tsx` — Sidebar layout
-- `client/src/components/receipt-print.tsx` — Printable receipt component
-- `client/src/components/payment-form-dialog.tsx` — Payment form
-- `client/src/components/student-form-dialog.tsx` — Student form
-- `client/src/pages/auth-page.tsx` — Login page
-- `client/src/pages/expenses/index.tsx` — Expenses list page
-- `client/src/components/expense-form-dialog.tsx` — Expense recording form
-- `client/src/hooks/use-expenses.ts` — Expense data hooks
+- `server/replit_integrations/auth/storage.ts` — Auth storage with role management
+- `client/src/components/layout.tsx` — Sidebar layout with RBAC-filtered menu items
+- `client/src/pages/settings/index.tsx` — Settings with Branding + User Management tabs
+- `client/src/pages/settings/users.tsx` — User management component
+- `client/src/pages/staff/index.tsx` — Staff page with Teaching/Non-Teaching tabs
+- `client/src/pages/verify-receipt/index.tsx` — Public receipt verification page
+- `client/src/lib/pdf-receipts.ts` — PDF generators with dynamic branding support
+- `client/src/components/receipt-print.tsx` — Printable receipt with branding
+- `client/src/hooks/use-branding.ts` — Branding data hooks
+- `client/src/hooks/use-non-teaching-staff.ts` — Non-teaching staff CRUD hooks
 - `client/src/hooks/use-teachers.ts` — Teacher data hooks
 - `client/src/hooks/use-payrolls.ts` — Payroll data hooks
-- `client/src/pages/teachers/index.tsx` — Teachers list page
-- `client/src/pages/payroll/index.tsx` — Payroll management page
-- `client/src/components/teacher-form-dialog.tsx` — Teacher form dialog
-- `client/src/lib/pdf-receipts.ts` — PDF receipt generators (payment, expense, payroll)
+- `client/src/hooks/use-expenses.ts` — Expense data hooks
 - `client/src/lib/utils.ts` — Utility functions including `formatCurrency()`
 
 ## Running
@@ -53,4 +67,6 @@ A web-based School Payment Recording System for private primary and secondary sc
 
 - System name: **HelioPay** (renamed from EduPay)
 - Currency formatting via `formatCurrency(amount, currency)` in `client/src/lib/utils.ts`
-- Replit Auth handles login/logout — do not use local auth
+- Replit Auth handles login/logout — no local auth
+- First user auto-assigned Admin role; subsequent users default to Bursar
+- Net salary = baseSalary + accommodationAllowance + transportAllowance + otherAllowances - deductions

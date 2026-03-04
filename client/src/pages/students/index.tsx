@@ -32,7 +32,8 @@ export default function StudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const isBursar = (user as any)?.role === 'bursar';
+  const userRole = (user as any)?.role || "Bursar";
+  const canEdit = userRole === "Admin" || userRole === "Bursar";
 
   const openEdit = (student: any) => {
     setSelectedStudent(student);
@@ -51,7 +52,7 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-display font-bold text-foreground">Students Directory</h1>
           <p className="text-muted-foreground mt-1">Manage enrollment and financial status</p>
         </div>
-        {!isBursar && (
+        {canEdit && (
           <Button onClick={openCreate} className="hover-elevate shadow-md font-semibold h-11 px-6">
             <Plus className="mr-2 h-5 w-5" /> Add Student
           </Button>
@@ -126,7 +127,7 @@ export default function StudentsPage() {
                             <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Profile
                           </Link>
                         </DropdownMenuItem>
-                        {!isBursar && (
+                        {canEdit && (
                           <>
                             <DropdownMenuItem onClick={() => openEdit(student)} className="cursor-pointer">
                               <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Edit

@@ -6,6 +6,8 @@ import {
   teachers,
   payrolls,
   payrollItems,
+  brandingSettings,
+  nonTeachingStaff,
   type Student,
   type InsertStudent,
   type Payment,
@@ -19,6 +21,10 @@ import {
   type InsertPayroll,
   type PayrollItem,
   type PayrollWithItems,
+  type BrandingSettings,
+  type InsertBranding,
+  type NonTeachingStaff,
+  type InsertNonTeachingStaff,
 } from "@shared/schema";
 import { eq, desc, ilike, or, sum } from "drizzle-orm";
 
@@ -47,6 +53,16 @@ export interface IStorage {
   createPayroll(data: InsertPayroll): Promise<PayrollWithItems>;
   updatePayrollStatus(id: number, status: string, approvedBy?: string): Promise<Payroll>;
   deletePayroll(id: number): Promise<void>;
+
+  getBrandingSettings(): Promise<BrandingSettings | undefined>;
+  updateBrandingSettings(data: InsertBranding): Promise<BrandingSettings>;
+
+  getNonTeachingStaff(): Promise<NonTeachingStaff[]>;
+  createNonTeachingStaff(data: InsertNonTeachingStaff): Promise<NonTeachingStaff>;
+  updateNonTeachingStaff(id: number, data: Partial<InsertNonTeachingStaff>): Promise<NonTeachingStaff>;
+  deleteNonTeachingStaff(id: number): Promise<void>;
+
+  getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string }) | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -233,6 +249,51 @@ export class DatabaseStorage implements IStorage {
   async deletePayroll(id: number): Promise<void> {
     await db.delete(payrollItems).where(eq(payrollItems.payrollId, id));
     await db.delete(payrolls).where(eq(payrolls.id, id));
+  }
+
+  async getBrandingSettings(): Promise<BrandingSettings | undefined> {
+    const [settings] = await db.select().from(brandingSettings).limit(1);
+    return settings;
+  }
+
+  async updateBrandingSettings(data: InsertBranding): Promise<BrandingSettings> {
+    const existing = await this.getBrandingSettings();
+    if (existing) {
+      const [updated] = await db.update(brandingSettings).set({ ...data, updatedAt: new Date() }).where(eq(brandingSettings.id, existing.id)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(brandingSettings).values(data).returning();
+    return created;
+  }
+
+  async getNonTeachingStaff(): Promise<NonTeachingStaff[]> {
+    return await db.select().from(nonTeachingStaff).orderBy(desc(nonTeachingStaff.createdAt));
+  }
+
+  async createNonTeachingStaff(data: InsertNonTeachingStaff): Promise<NonTeachingStaff> {
+    const [staff] = await db.insert(nonTeachingStaff).values(data).returning();
+    return staff;
+  }
+
+  async updateNonTeachingStaff(id: number, data: Partial<InsertNonTeachingStaff>): Promise<NonTeachingStaff> {
+    const [updated] = await db.update(nonTeachingStaff).set(data).where(eq(nonTeachingStaff.id, id)).returning();
+    return updated;
+  }
+
+  async deleteNonTeachingStaff(id: number): Promise<void> {
+    await db.delete(nonTeachingStaff).where(eq(nonTeachingStaff.id, id));
+  }
+
+  async getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string }) | undefined> {
+    const [payment] = await db.select().from(payments).where(eq(payments.receiptNumber, receiptNumber));
+    if (!payment) return undefined;
+    const [student] = await db.select().from(students).where(eq(students.id, payment.studentId));
+    return {
+      ...payment,
+      studentName: student?.fullName || "Unknown",
+      studentAdmissionNumber: student?.admissionNumber || "N/A",
+      studentClassGrade: student?.classGrade || "N/A",
+    };
   }
 }
 

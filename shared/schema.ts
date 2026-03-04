@@ -140,3 +140,33 @@ export type PayrollWithItems = Payroll & { items: (PayrollItem & { teacherName: 
 
 export type CreatePaymentRequest = InsertPayment;
 export type PaymentResponse = Payment & { studentName?: string };
+
+export const brandingSettings = pgTable("branding_settings", {
+  id: serial("id").primaryKey(),
+  schoolName: text("school_name").notNull().default("HelioPay System"),
+  schoolAddress: text("school_address").notNull().default(""),
+  logoUrl: text("logo_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const nonTeachingStaff = pgTable("non_teaching_staff", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  position: text("position").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  baseSalary: integer("base_salary").notNull().default(0),
+  currency: text("currency").notNull().default("UGX"),
+  contractType: text("contract_type").notNull().default("Permanent"),
+  status: text("status").notNull().default("Active"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBrandingSchema = createInsertSchema(brandingSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertNonTeachingStaffSchema = createInsertSchema(nonTeachingStaff).omit({ id: true, createdAt: true });
+
+export type BrandingSettings = typeof brandingSettings.$inferSelect;
+export type InsertBranding = z.infer<typeof insertBrandingSchema>;
+
+export type NonTeachingStaff = typeof nonTeachingStaff.$inferSelect;
+export type InsertNonTeachingStaff = z.infer<typeof insertNonTeachingStaffSchema>;

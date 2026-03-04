@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, CheckCircle, XCircle, ChevronDown, ChevronUp, FileDown } from "lucide-react";
 import { generatePayrollReceiptPDF } from "@/lib/pdf-receipts";
+import type { BrandingParam } from "@/lib/pdf-receipts";
+import { useBranding } from "@/hooks/use-branding";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Payroll } from "@shared/schema";
 
@@ -22,7 +24,7 @@ const statusBadgeVariants: Record<string, string> = {
   Rejected: "bg-red-500/10 text-red-700 border-red-200 dark:text-red-300 dark:border-red-600",
 };
 
-function PayrollCard({ payroll, isAdmin }: { payroll: Payroll; isAdmin: boolean }) {
+function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin: boolean; branding?: BrandingParam }) {
   const [expanded, setExpanded] = useState(false);
   const { data: detail, isLoading: detailLoading } = usePayroll(expanded ? payroll.id : 0);
   const approveMutation = useApprovePayroll();
@@ -129,7 +131,7 @@ function PayrollCard({ payroll, isAdmin }: { payroll: Payroll; isAdmin: boolean 
               <Button
                 variant="outline"
                 className="hover:text-blue-600"
-                onClick={() => generatePayrollReceiptPDF(payroll, detail?.items || [])}
+                onClick={() => generatePayrollReceiptPDF(payroll, detail?.items || [], branding)}
                 data-testid={`button-pdf-payroll-${payroll.id}`}
               >
                 <FileDown className="mr-2 h-4 w-4" />
@@ -145,14 +147,16 @@ function PayrollCard({ payroll, isAdmin }: { payroll: Payroll; isAdmin: boolean 
 
 export default function PayrollPage() {
   const { data: payrolls, isLoading } = usePayrolls();
+  const { data: branding } = useBranding();
   const createMutation = useCreatePayroll();
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [month, setMonth] = useState("");
   const [currency, setCurrency] = useState("UGX");
 
-  const userRole = (user as any)?.role || "Admin";
+  const userRole = (user as any)?.role || "Bursar";
   const isAdmin = userRole === "Admin";
+  const canEdit = userRole !== "Principal";
 
   const handleGenerate = () => {
     if (!month) return;
@@ -180,9 +184,11 @@ export default function PayrollPage() {
           <h1 className="text-2xl font-display font-bold text-foreground" data-testid="text-payroll-title">Payroll</h1>
           <p className="text-muted-foreground mt-1">Generate and manage teacher payrolls</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} data-testid="button-generate-payroll">
-          <Plus className="mr-2 h-5 w-5" /> Generate Payroll
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setDialogOpen(true)} data-testid="button-generate-payroll">
+            <Plus className="mr-2 h-5 w-5" /> Generate Payroll
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -198,7 +204,7 @@ export default function PayrollPage() {
       ) : (
         <div className="space-y-3" data-testid="list-payrolls">
           {payrolls?.map((payroll) => (
-            <PayrollCard key={payroll.id} payroll={payroll} isAdmin={isAdmin} />
+            <PayrollCard key={payroll.id} payroll={payroll} isAdmin={isAdmin} branding={branding} />
           ))}
         </div>
       )}

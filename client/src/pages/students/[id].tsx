@@ -1,5 +1,6 @@
 import { useRoute } from "wouter";
 import { useStudent } from "@/hooks/use-students";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,15 @@ import { PaymentFormDialog } from "@/components/payment-form-dialog";
 import { useState } from "react";
 import { ReceiptPrint } from "@/components/receipt-print";
 import { generatePaymentReceiptPDF } from "@/lib/pdf-receipts";
+import { useBranding } from "@/hooks/use-branding";
 
 export default function StudentProfile() {
   const [, params] = useRoute("/students/:id");
   const studentId = parseInt(params?.id || "0");
   const { data: student, isLoading } = useStudent(studentId);
+  const { data: branding } = useBranding();
+  const { user } = useAuth();
+  const canEdit = (user as any)?.role !== "Principal";
   const [paymentOpen, setPaymentOpen] = useState(false);
   
   // Print state tracking
@@ -35,7 +40,7 @@ export default function StudentProfile() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <ReceiptPrint payment={printData?.payment} student={printData?.student} />
+      <ReceiptPrint payment={printData?.payment} student={printData?.student} branding={branding} />
 
       <div className="flex items-center gap-4 mb-8">
         <Button variant="outline" size="icon" asChild className="h-10 w-10 rounded-xl hover-elevate">
@@ -120,9 +125,11 @@ export default function StudentProfile() {
           <Card className="shadow-sm border-border/50 h-full flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between bg-muted/20 border-b border-border/50 pb-4">
               <CardTitle className="text-xl font-display">Payment History</CardTitle>
-              <Button onClick={() => setPaymentOpen(true)} className="hover-elevate shadow-md font-semibold bg-gradient-to-r from-primary to-primary/90">
-                <Plus className="mr-2 h-4 w-4" /> Record Payment
-              </Button>
+              {canEdit && (
+                <Button onClick={() => setPaymentOpen(true)} className="hover-elevate shadow-md font-semibold bg-gradient-to-r from-primary to-primary/90">
+                  <Plus className="mr-2 h-4 w-4" /> Record Payment
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="flex-1 p-0">
               {student.payments?.length === 0 ? (
@@ -157,7 +164,7 @@ export default function StudentProfile() {
                         <Button variant="outline" className="hover-elevate" onClick={() => handlePrint(payment)}>
                           Print Receipt
                         </Button>
-                        <Button variant="outline" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => generatePaymentReceiptPDF(payment, student)}>
+                        <Button variant="outline" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => generatePaymentReceiptPDF(payment, student, branding)}>
                           <FileDown className="mr-2 h-4 w-4" /> Download PDF
                         </Button>
                       </div>
