@@ -1,0 +1,24 @@
+Modify the existing application to implement advanced payment handling, staff management, and strict administrative security as follows:
+​1. Advanced Payment & Receipting
+​Payment Recording: Update the payment form to allow recording Multiple Fee Types (e.g., Tuition, Uniform, Transport, Lab Fees) for a single student entry.
+​Smart Selection: The "Select Student" dropdown must be grouped by Class (e.g., Senior 1 > John Doe) to improve navigation.
+​Navigation: Move the "Verify Receipt" tool into a sub-tab within the Payment section.
+​Bulk Reporting: Add a button to generate a Master Payment PDF Report that lists all student payments, filtered by Term or Class.
+​2. Unified Staff & Payroll System
+​Staff Profiles: Implement full CRUD (Create, Read, Update, Delete) for all staff. Each staff member (Teacher or Non-Teaching) must have a profile page similar to the Student profile.
+​Payroll Integration: Create a Payroll Module that automatically pulls all staff from the database.
+​Include fields for: Base Salary, Allowances, Deductions, and Net Pay.
+​Generate a "Payslip" PDF for individual staff members.
+​3. User Management & Admin Controls
+​Private Access: Disable public registration. The system must be Invite-Only.
+​Admin Console: Create a "User Management" page where the Admin can:
+​Admit Users: Create new accounts for Bursars, Principals, or other Admins.
+​Role Assignment: Select roles (Admin, Bursar, Principal) from a dropdown.
+​Credential Control: Manually set and reset user passwords.
+​4. Security & Authentication
+​Two-Factor Authentication (2FA): Implement an Email OTP (One-Time Password) system.
+​Flow: After entering the correct password, the system sends a 6-digit code to the user’s registered email. The user must enter this code to complete the login.
+​Session Management: Ensure the OTP expires after 5–10 minutes.
+​5. Technical Data Schema Requirements
+​Tables: Ensure a users table handles roles and 2FA secrets. The payments table should support a category field for different fee types.
+​Logic: Ensure only the Admin role can see the "User Management" and "Settings" pages.
