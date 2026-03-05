@@ -16,6 +16,11 @@ const formSchema = insertNonTeachingStaffSchema.extend({
   position: z.string().min(1, "Position is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
   baseSalary: z.coerce.number().min(0, "Salary must be positive"),
+  accommodationAllowance: z.coerce.number().min(0).optional(),
+  transportAllowance: z.coerce.number().min(0).optional(),
+  otherAllowances: z.coerce.number().min(0).optional(),
+  deductions: z.coerce.number().min(0).optional(),
+  deductionNotes: z.string().optional(),
   currency: z.string().min(1, "Please select a currency"),
   contractType: z.string().min(1, "Please select a contract type"),
 }).omit({ status: true });
@@ -55,6 +60,11 @@ export function NonTeachingStaffFormDialog({
         position: staff?.position || "",
         phoneNumber: staff?.phoneNumber || "",
         baseSalary: staff?.baseSalary || 0,
+        accommodationAllowance: (staff as any)?.accommodationAllowance || 0,
+        transportAllowance: (staff as any)?.transportAllowance || 0,
+        otherAllowances: (staff as any)?.otherAllowances || 0,
+        deductions: (staff as any)?.deductions || 0,
+        deductionNotes: (staff as any)?.deductionNotes || "",
         currency: staff?.currency || "UGX",
         contractType: staff?.contractType || "Permanent",
       });
@@ -174,6 +184,78 @@ export function NonTeachingStaffFormDialog({
                           <SelectItem value="USD">USD</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="accommodationAllowance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Accommodation Allowance</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" className="h-11" data-testid="input-nts-accommodation" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="transportAllowance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Transport Allowance</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" className="h-11" data-testid="input-nts-transport" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="otherAllowances"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Other Allowances</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="0" className="h-11" data-testid="input-nts-other-allowances" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="deductions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deductions</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" className="h-11" data-testid="input-nts-deductions" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="deductionNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deduction Notes</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Tax, Insurance" className="h-11" data-testid="input-nts-deduction-notes" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

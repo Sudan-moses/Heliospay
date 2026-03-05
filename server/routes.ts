@@ -30,25 +30,28 @@ export async function registerRoutes(
     const userId = req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
     const user = await authStorage.getUser(userId);
-    if (!user || user.role === "Principal" || user.role === "Suspended") {
+    if (!user || user.role === "Principal" || user.role === "Suspended" || user.role === "Pending") {
       return res.status(403).json({ message: "You do not have permission to perform this action" });
     }
     next();
   };
 
-  const blockSuspended = async (req: any, res: Response, next: NextFunction) => {
+  const blockInactive = async (req: any, res: Response, next: NextFunction) => {
     const userId = req.user?.claims?.sub;
     if (userId) {
       const user = await authStorage.getUser(userId);
       if (user?.role === "Suspended") {
         return res.status(403).json({ message: "Your account has been suspended" });
       }
+      if (user?.role === "Pending") {
+        return res.status(403).json({ message: "Your account is pending approval by an administrator" });
+      }
     }
     next();
   };
 
-  app.use('/api/students', isAuthenticated, blockSuspended);
-  app.use('/api/payments', isAuthenticated, blockSuspended);
+  app.use('/api/students', isAuthenticated, blockInactive);
+  app.use('/api/payments', isAuthenticated, blockInactive);
 
   app.get(api.students.list.path, async (req, res) => {
     const search = req.query.search as string | undefined;
@@ -136,8 +139,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/payments/report', isAuthenticated, blockInactive, async (req, res) => {
+    const term = req.query.term as string | undefined;
+    const classGrade = req.query.classGrade as string | undefined;
+    const filtered = await storage.getPaymentsFiltered(term, classGrade);
+    res.json(filtered);
+  });
+
   // Expenses routes
-  app.use('/api/expenses', isAuthenticated, blockSuspended);
+  app.use('/api/expenses', isAuthenticated, blockInactive);
 
   app.get(api.expenses.list.path, async (req, res) => {
     const expensesList = await storage.getExpenses();
@@ -168,11 +178,17 @@ export async function registerRoutes(
   });
 
   // Teacher routes
-  app.use('/api/teachers', isAuthenticated, blockSuspended);
+  app.use('/api/teachers', isAuthenticated, blockInactive);
 
   app.get(api.teachers.list.path, async (req, res) => {
     const teachersList = await storage.getTeachers();
     res.json(teachersList);
+  });
+
+  app.get('/api/teachers/:id', isAuthenticated, blockInactive, async (req, res) => {
+    const teacher = await storage.getTeacher(Number(req.params.id));
+    if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+    res.json(teacher);
   });
 
   app.post(api.teachers.create.path, canModify, async (req, res) => {
@@ -219,7 +235,7 @@ export async function registerRoutes(
   });
 
   // Payroll routes
-  app.use('/api/payrolls', isAuthenticated, blockSuspended);
+  app.use('/api/payrolls', isAuthenticated, blockInactive);
 
   app.get(api.payrolls.list.path, async (req, res) => {
     const payrollsList = await storage.getPayrolls();
@@ -298,7 +314,7 @@ export async function registerRoutes(
   });
 
   // Non-teaching staff routes
-  app.use('/api/non-teaching-staff', isAuthenticated, blockSuspended);
+  app.use('/api/non-teaching-staff', isAuthenticated, blockInactive);
 
   app.get('/api/non-teaching-staff', async (req, res) => {
     const staff = await storage.getNonTeachingStaff();
@@ -340,6 +356,18 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  app.get('/api/non-teaching-staff/:id', isAuthenticated, blockInactive, async (req, res) => {
+    const staff = await storage.getNonTeachingStaffMember(Number(req.params.id));
+    if (!staff) return res.status(404).json({ message: "Staff member not found" });
+    res.json(staff);
+  });
+
+  app.get('/api/staff/:type/:id/payroll-history', isAuthenticated, blockInactive, async (req, res) => {
+    const { type, id } = req.params;
+    const items = await storage.getPayrollItemsForStaff(type, Number(id));
+    res.json(items);
+  });
+
   // User management routes (admin only)
   app.get('/api/users', isAuthenticated, isAdmin, async (req, res) => {
     const users = await authStorage.getUsers();
@@ -348,7 +376,7 @@ export async function registerRoutes(
 
   app.put('/api/users/:id/role', isAuthenticated, isAdmin, async (req, res) => {
     const { role } = req.body;
-    if (!["Admin", "Bursar", "Principal", "Suspended"].includes(role)) {
+    if (!["Admin", "Bursar", "Principal", "Suspended", "Pending"].includes(role)) {
       return res.status(400).json({ message: "Invalid role" });
     }
     const user = await authStorage.updateUserRole(req.params.id, role);
@@ -356,7 +384,7 @@ export async function registerRoutes(
   });
 
   // Budget routes
-  app.use('/api/budgets', isAuthenticated, blockSuspended);
+  app.use('/api/budgets', isAuthenticated, blockInactive);
 
   app.get('/api/budgets', async (req, res) => {
     const term = req.query.term as string | undefined;
@@ -401,7 +429,7 @@ export async function registerRoutes(
   });
 
   // Financial reports
-  app.get('/api/reports/financial-summary', isAuthenticated, blockSuspended, async (req, res) => {
+  app.get('/api/reports/financial-summary', isAuthenticated, blockInactive, async (req, res) => {
     const period = req.query.period as string || "monthly";
     const term = req.query.term as string | undefined;
     const now = new Date();
@@ -427,7 +455,7 @@ export async function registerRoutes(
   });
 
   // Budget vs Expenditure comparison
-  app.get('/api/reports/budget-vs-actual', isAuthenticated, blockSuspended, async (req, res) => {
+  app.get('/api/reports/budget-vs-actual', isAuthenticated, blockInactive, async (req, res) => {
     const term = req.query.term as string || "Term 1";
     const academicYear = req.query.academicYear as string || "2023/2024";
 

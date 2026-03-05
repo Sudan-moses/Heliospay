@@ -17,7 +17,7 @@ import {
 import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet, ShieldCheck, Settings, BarChart3, PiggyBank } from "lucide-react";
 import { Button } from "./ui/button";
 
-type UserRole = "Admin" | "Bursar" | "Principal" | "Suspended";
+type UserRole = "Admin" | "Bursar" | "Principal" | "Suspended" | "Pending";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
@@ -28,7 +28,6 @@ const menuItems = [
   { title: "Payroll", url: "/payroll", icon: Wallet, roles: ["Admin", "Bursar"] as UserRole[] },
   { title: "Reports", url: "/reports", icon: BarChart3, roles: ["Admin", "Bursar"] as UserRole[] },
   { title: "Budget", url: "/budget", icon: PiggyBank, roles: ["Admin", "Bursar"] as UserRole[] },
-  { title: "Verify Receipt", url: "/verify-receipt", icon: ShieldCheck, roles: ["Admin", "Bursar", "Principal"] as UserRole[] },
 ];
 
 function AppSidebar() {
@@ -102,7 +101,31 @@ function AppSidebar() {
   );
 }
 
+function PendingApprovalMessage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background/50 p-8">
+      <div className="max-w-md text-center space-y-6">
+        <div className="mx-auto h-20 w-20 bg-amber-500/10 rounded-full flex items-center justify-center">
+          <ShieldCheck className="h-10 w-10 text-amber-500" />
+        </div>
+        <h1 className="text-2xl font-display font-bold text-foreground" data-testid="text-pending-title">Account Pending Approval</h1>
+        <p className="text-muted-foreground" data-testid="text-pending-message">
+          Your account has been created but is awaiting approval from an administrator.
+          You will be able to access the system once your account has been approved and a role has been assigned.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userRole = ((user as any)?.role || "Pending") as UserRole;
+
+  if (userRole === "Pending") {
+    return <PendingApprovalMessage />;
+  }
+
   const style = {
     "--sidebar-width": "16rem",
   } as React.CSSProperties;

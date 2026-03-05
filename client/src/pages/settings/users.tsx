@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Shield } from "lucide-react";
+import { Users, Shield, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -17,6 +18,7 @@ const roleBadgeStyles: Record<string, string> = {
   Bursar: "bg-blue-500/10 text-blue-700 border-blue-200 dark:text-blue-300 dark:border-blue-600",
   Principal: "bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-300 dark:border-emerald-600",
   Suspended: "bg-red-500/10 text-red-700 border-red-200 dark:text-red-300 dark:border-red-600",
+  Pending: "bg-amber-500/10 text-amber-700 border-amber-200 dark:text-amber-300 dark:border-amber-600",
 };
 
 export default function UsersManagement() {
@@ -61,7 +63,77 @@ export default function UsersManagement() {
     );
   }
 
+  const pendingUsers = users?.filter(u => u.role === "Pending") || [];
+  const sortedUsers = users ? [...users].sort((a, b) => {
+    if (a.role === "Pending" && b.role !== "Pending") return -1;
+    if (b.role === "Pending" && a.role !== "Pending") return 1;
+    return 0;
+  }) : [];
+
   return (
+    <div className="space-y-4">
+      {pendingUsers.length > 0 && (
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20" data-testid="card-pending-users">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              <CardTitle className="text-amber-800 dark:text-amber-300">
+                {pendingUsers.length} Pending Approval{pendingUsers.length > 1 ? "s" : ""}
+              </CardTitle>
+            </div>
+            <CardDescription>
+              These users have registered but need role assignment before they can access the system.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {pendingUsers.map(u => (
+                <div key={u.id} className="flex items-center justify-between gap-3 p-3 bg-white dark:bg-background rounded-lg border border-amber-200 dark:border-amber-800" data-testid={`row-pending-user-${u.id}`}>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={u.profileImageUrl || undefined} />
+                      <AvatarFallback className="text-xs font-bold">
+                        {u.firstName?.[0] || u.email?.[0] || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <span className="font-medium text-foreground" data-testid={`text-pending-name-${u.id}`}>
+                        {u.firstName || "Unknown"} {u.lastName || ""}
+                      </span>
+                      <p className="text-xs text-muted-foreground">{u.email || "No email"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => updateRoleMutation.mutate({ id: u.id, role: "Bursar" })}
+                      disabled={updateRoleMutation.isPending}
+                      data-testid={`button-approve-bursar-${u.id}`}
+                    >
+                      Approve as Bursar
+                    </Button>
+                    <Select
+                      onValueChange={(role) => updateRoleMutation.mutate({ id: u.id, role })}
+                      disabled={updateRoleMutation.isPending}
+                    >
+                      <SelectTrigger className="w-[140px] h-8" data-testid={`select-approve-role-${u.id}`}>
+                        <SelectValue placeholder="Other role..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="Principal">Principal</SelectItem>
+                        <SelectItem value="Suspended">Reject</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2 flex-wrap">
@@ -134,6 +206,7 @@ export default function UsersManagement() {
                         <SelectItem value="Admin">Admin</SelectItem>
                         <SelectItem value="Bursar">Bursar</SelectItem>
                         <SelectItem value="Principal">Principal</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
                         <SelectItem value="Suspended">Suspended</SelectItem>
                       </SelectContent>
                     </Select>
@@ -145,5 +218,6 @@ export default function UsersManagement() {
         </Table>
       </CardContent>
     </Card>
+    </div>
   );
 }

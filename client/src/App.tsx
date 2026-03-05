@@ -13,6 +13,7 @@ import StudentProfile from "@/pages/students/[id]";
 import PaymentsPage from "@/pages/payments";
 import ExpensesPage from "@/pages/expenses";
 import StaffPage from "@/pages/staff";
+import StaffProfile from "@/pages/staff/[id]";
 import PayrollPage from "@/pages/payroll";
 import ReportsPage from "@/pages/reports";
 import SettingsPage from "@/pages/settings";
@@ -30,6 +31,7 @@ function ProtectedRoutes() {
         <Route path="/students/:id" component={StudentProfile}/>
         <Route path="/payments" component={PaymentsPage}/>
         <Route path="/expenses" component={ExpensesPage}/>
+        <Route path="/staff/:type/:id" component={StaffProfile}/>
         <Route path="/staff" component={StaffPage}/>
         <Route path="/payroll" component={PayrollPage}/>
         <Route path="/reports" component={ReportsPage}/>

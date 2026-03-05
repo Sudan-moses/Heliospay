@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, CheckCircle, XCircle, ChevronDown, ChevronUp, FileDown } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, ChevronDown, ChevronUp, FileDown, User } from "lucide-react";
+import { Link } from "wouter";
 import { generatePayrollReceiptPDF } from "@/lib/pdf-receipts";
 import type { BrandingParam } from "@/lib/pdf-receipts";
 import { useBranding } from "@/hooks/use-branding";
@@ -69,11 +70,27 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
             </div>
           ) : detail?.items && detail.items.length > 0 ? (
             <div className="space-y-2" data-testid={`list-payroll-items-${payroll.id}`}>
-              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Teacher Salaries</p>
-              {detail.items.map((item) => (
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Staff Salaries</p>
+              {detail.items.map((item: any) => (
                 <div key={item.id} className="flex flex-row flex-wrap items-center justify-between gap-2 py-1 px-2 rounded-md bg-muted/30" data-testid={`row-payroll-item-${item.id}`}>
-                  <span className="text-sm font-medium text-foreground" data-testid={`text-teacher-name-${item.id}`}>{item.teacherName}</span>
-                  <span className="text-sm font-bold text-foreground" data-testid={`text-teacher-amount-${item.id}`}>{formatCurrency(item.amount, item.currency)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground" data-testid={`text-staff-name-${item.id}`}>{item.staffName || item.teacherName}</span>
+                    {item.staffType && (
+                      <Badge variant="outline" className="text-xs">
+                        {item.staffType === "teacher" ? "Teaching" : "Non-Teaching"}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-foreground" data-testid={`text-staff-amount-${item.id}`}>{formatCurrency(item.amount, item.currency)}</span>
+                    {(item.teacherId || item.nonTeachingStaffId) && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" asChild data-testid={`button-view-staff-${item.id}`} title="View Profile">
+                        <Link href={`/staff/${item.staffType === "non-teaching" ? "non-teaching" : "teacher"}/${item.nonTeachingStaffId || item.teacherId}`}>
+                          <User className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -182,7 +199,7 @@ export default function PayrollPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground" data-testid="text-payroll-title">Payroll</h1>
-          <p className="text-muted-foreground mt-1">Generate and manage teacher payrolls</p>
+          <p className="text-muted-foreground mt-1">Generate and manage staff payrolls</p>
         </div>
         {canEdit && (
           <Button onClick={() => setDialogOpen(true)} data-testid="button-generate-payroll">

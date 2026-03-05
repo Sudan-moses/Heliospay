@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Pencil, Trash2, Info } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Info, Eye } from "lucide-react";
+import { Link } from "wouter";
 import { TeacherFormDialog } from "@/components/teacher-form-dialog";
 import { NonTeachingStaffFormDialog } from "@/components/non-teaching-staff-form-dialog";
 import { Input } from "@/components/ui/input";
@@ -65,17 +66,17 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
               <TableHead className="font-semibold text-foreground">Subjects</TableHead>
               <TableHead className="font-semibold text-foreground text-right">Net Salary</TableHead>
               <TableHead className="font-semibold text-foreground">Status</TableHead>
-              {canEdit && <TableHead className="w-[100px] text-right">Actions</TableHead>}
+              <TableHead className="w-[120px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="h-48 text-center text-muted-foreground">Loading teachers...</TableCell>
+                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">Loading teachers...</TableCell>
               </TableRow>
             ) : filteredTeachers?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="h-48 text-center text-muted-foreground">No teachers found.</TableCell>
+                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">No teachers found.</TableCell>
               </TableRow>
             ) : (
               filteredTeachers?.map((teacher) => (
@@ -159,32 +160,45 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
                       {teacher.status}
                     </Badge>
                   </TableCell>
-                  {canEdit && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(teacher)}
-                          title="Edit Teacher"
-                          data-testid={`button-edit-teacher-${teacher.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:text-red-600"
-                          onClick={() => deleteMutation.mutate(teacher.id)}
-                          disabled={deleteMutation.isPending}
-                          title="Delete Teacher"
-                          data-testid={`button-delete-teacher-${teacher.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        title="View Teacher"
+                        data-testid={`button-view-teacher-${teacher.id}`}
+                      >
+                        <Link href={`/staff/teacher/${teacher.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      {canEdit && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(teacher)}
+                            title="Edit Teacher"
+                            data-testid={`button-edit-teacher-${teacher.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:text-red-600"
+                            onClick={() => deleteMutation.mutate(teacher.id)}
+                            disabled={deleteMutation.isPending}
+                            title="Delete Teacher"
+                            data-testid={`button-delete-teacher-${teacher.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -250,17 +264,17 @@ function NonTeachingStaffTab({ canEdit }: { canEdit: boolean }) {
               <TableHead className="font-semibold text-foreground">Contract</TableHead>
               <TableHead className="font-semibold text-foreground text-right">Salary</TableHead>
               <TableHead className="font-semibold text-foreground">Status</TableHead>
-              {canEdit && <TableHead className="w-[100px] text-right">Actions</TableHead>}
+              <TableHead className="w-[120px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6} className="h-48 text-center text-muted-foreground">Loading staff...</TableCell>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">Loading staff...</TableCell>
               </TableRow>
             ) : filteredStaff?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6} className="h-48 text-center text-muted-foreground">No non-teaching staff found.</TableCell>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">No non-teaching staff found.</TableCell>
               </TableRow>
             ) : (
               filteredStaff?.map((staff) => (
@@ -290,32 +304,45 @@ function NonTeachingStaffTab({ canEdit }: { canEdit: boolean }) {
                       {staff.status}
                     </Badge>
                   </TableCell>
-                  {canEdit && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(staff)}
-                          title="Edit Staff"
-                          data-testid={`button-edit-nts-${staff.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:text-red-600"
-                          onClick={() => deleteMutation.mutate(staff.id)}
-                          disabled={deleteMutation.isPending}
-                          title="Delete Staff"
-                          data-testid={`button-delete-nts-${staff.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        title="View Staff"
+                        data-testid={`button-view-nts-${staff.id}`}
+                      >
+                        <Link href={`/staff/non-teaching/${staff.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      {canEdit && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(staff)}
+                            title="Edit Staff"
+                            data-testid={`button-edit-nts-${staff.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:text-red-600"
+                            onClick={() => deleteMutation.mutate(staff.id)}
+                            disabled={deleteMutation.isPending}
+                            title="Delete Staff"
+                            data-testid={`button-delete-nts-${staff.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}

@@ -65,7 +65,13 @@ export interface IStorage {
   updateNonTeachingStaff(id: number, data: Partial<InsertNonTeachingStaff>): Promise<NonTeachingStaff>;
   deleteNonTeachingStaff(id: number): Promise<void>;
 
+  getNonTeachingStaffMember(id: number): Promise<NonTeachingStaff | undefined>;
+
   getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string }) | undefined>;
+
+  getPaymentsFiltered(term?: string, classGrade?: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string })[]>;
+
+  getPayrollItemsForStaff(staffType: string, staffId: number): Promise<(PayrollItem & { payrollMonth: string; payrollStatus: string })[]>;
 
   getBudgets(term?: string, academicYear?: string): Promise<Budget[]>;
   createBudget(data: InsertBudget): Promise<Budget>;
@@ -205,24 +211,34 @@ export class DatabaseStorage implements IStorage {
 
     const items = await db.select().from(payrollItems).where(eq(payrollItems.payrollId, id));
     const allTeachers = await db.select().from(teachers);
+    const allNTS = await db.select().from(nonTeachingStaff);
 
-    const itemsWithNames = items.map(item => ({
-      ...item,
-      teacherName: allTeachers.find(t => t.id === item.teacherId)?.fullName || "Unknown",
-    }));
+    const itemsWithNames = items.map(item => {
+      let staffName = "Unknown";
+      if (item.staffType === "non-teaching" && item.nonTeachingStaffId) {
+        staffName = allNTS.find(s => s.id === item.nonTeachingStaffId)?.fullName || "Unknown";
+      } else if (item.teacherId) {
+        staffName = allTeachers.find(t => t.id === item.teacherId)?.fullName || "Unknown";
+      }
+      return { ...item, staffName };
+    });
 
     return { ...payroll, items: itemsWithNames };
   }
 
   async createPayroll(data: InsertPayroll): Promise<PayrollWithItems> {
     const activeTeachers = await db.select().from(teachers).where(eq(teachers.status, "Active"));
+    const activeNTS = await db.select().from(nonTeachingStaff).where(eq(nonTeachingStaff.status, "Active"));
     const payrollCurrency = data.currency || "UGX";
     const eligibleTeachers = activeTeachers.filter(t => t.baseSalary > 0 && t.currency === payrollCurrency);
+    const eligibleNTS = activeNTS.filter(s => s.baseSalary > 0 && s.currency === payrollCurrency);
 
-    const getNetSalary = (t: typeof activeTeachers[0]) =>
-      t.baseSalary + (t.accommodationAllowance || 0) + (t.transportAllowance || 0) + (t.otherAllowances || 0) - (t.deductions || 0);
+    const getNetSalary = (s: { baseSalary: number; accommodationAllowance: number; transportAllowance: number; otherAllowances: number; deductions: number }) =>
+      s.baseSalary + (s.accommodationAllowance || 0) + (s.transportAllowance || 0) + (s.otherAllowances || 0) - (s.deductions || 0);
 
-    const totalAmount = eligibleTeachers.reduce((sum, t) => sum + getNetSalary(t), 0);
+    const teacherTotal = eligibleTeachers.reduce((sum, t) => sum + getNetSalary(t), 0);
+    const ntsTotal = eligibleNTS.reduce((sum, s) => sum + getNetSalary(s), 0);
+    const totalAmount = teacherTotal + ntsTotal;
 
     const [payroll] = await db.insert(payrolls).values({
       month: data.month,
@@ -232,22 +248,40 @@ export class DatabaseStorage implements IStorage {
       currency: payrollCurrency,
     }).returning();
 
-    const itemsToInsert = eligibleTeachers.map(t => ({
+    const teacherItems = eligibleTeachers.map(t => ({
       payrollId: payroll.id,
       teacherId: t.id,
+      nonTeachingStaffId: null as number | null,
+      staffType: "teacher" as const,
       amount: getNetSalary(t),
       currency: t.currency,
     }));
+
+    const ntsItems = eligibleNTS.map(s => ({
+      payrollId: payroll.id,
+      teacherId: null as number | null,
+      nonTeachingStaffId: s.id,
+      staffType: "non-teaching" as const,
+      amount: getNetSalary(s),
+      currency: s.currency,
+    }));
+
+    const itemsToInsert = [...teacherItems, ...ntsItems];
 
     let insertedItems: PayrollItem[] = [];
     if (itemsToInsert.length > 0) {
       insertedItems = await db.insert(payrollItems).values(itemsToInsert).returning();
     }
 
-    const itemsWithNames = insertedItems.map(item => ({
-      ...item,
-      teacherName: eligibleTeachers.find(t => t.id === item.teacherId)?.fullName || "Unknown",
-    }));
+    const itemsWithNames = insertedItems.map(item => {
+      let staffName = "Unknown";
+      if (item.staffType === "non-teaching" && item.nonTeachingStaffId) {
+        staffName = eligibleNTS.find(s => s.id === item.nonTeachingStaffId)?.fullName || "Unknown";
+      } else if (item.teacherId) {
+        staffName = eligibleTeachers.find(t => t.id === item.teacherId)?.fullName || "Unknown";
+      }
+      return { ...item, staffName };
+    });
 
     return { ...payroll, items: itemsWithNames };
   }
@@ -297,7 +331,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteNonTeachingStaff(id: number): Promise<void> {
+    await db.delete(payrollItems).where(eq(payrollItems.nonTeachingStaffId, id));
     await db.delete(nonTeachingStaff).where(eq(nonTeachingStaff.id, id));
+  }
+
+  async getNonTeachingStaffMember(id: number): Promise<NonTeachingStaff | undefined> {
+    const [staff] = await db.select().from(nonTeachingStaff).where(eq(nonTeachingStaff.id, id));
+    return staff;
   }
 
   async getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string }) | undefined> {
@@ -310,6 +350,45 @@ export class DatabaseStorage implements IStorage {
       studentAdmissionNumber: student?.admissionNumber || "N/A",
       studentClassGrade: student?.classGrade || "N/A",
     };
+  }
+
+  async getPaymentsFiltered(term?: string, classGrade?: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string })[]> {
+    const allPayments = await db.select().from(payments).orderBy(desc(payments.paymentDate));
+    const allStudents = await db.select().from(students);
+
+    return allPayments
+      .map(payment => {
+        const student = allStudents.find(s => s.id === payment.studentId);
+        return {
+          ...payment,
+          studentName: student?.fullName || 'Unknown',
+          studentAdmissionNumber: student?.admissionNumber || 'N/A',
+          studentClassGrade: student?.classGrade || 'N/A',
+        };
+      })
+      .filter(p => {
+        if (term && p.term !== term) return false;
+        if (classGrade && p.studentClassGrade !== classGrade) return false;
+        return true;
+      });
+  }
+
+  async getPayrollItemsForStaff(staffType: string, staffId: number): Promise<(PayrollItem & { payrollMonth: string; payrollStatus: string })[]> {
+    const condition = staffType === "teacher"
+      ? eq(payrollItems.teacherId, staffId)
+      : eq(payrollItems.nonTeachingStaffId, staffId);
+
+    const items = await db.select().from(payrollItems).where(condition);
+    const allPayrolls = await db.select().from(payrolls);
+
+    return items.map(item => {
+      const payroll = allPayrolls.find(p => p.id === item.payrollId);
+      return {
+        ...item,
+        payrollMonth: payroll?.month || "Unknown",
+        payrollStatus: payroll?.status || "Unknown",
+      };
+    });
   }
 
   async getBudgets(term?: string, academicYear?: string): Promise<Budget[]> {
