@@ -80,25 +80,25 @@ export default function StaffProfile() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-6">
-          <Card className="shadow-lg border-0 overflow-hidden relative">
-            <div className="h-24 bg-gradient-to-br from-teal-600 to-teal-500 absolute w-full top-0 left-0"></div>
+          <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden relative">
+            <div className="h-24 bg-gradient-to-br from-primary to-emerald-600 absolute w-full top-0 left-0"></div>
             <CardContent className="pt-12 relative z-10">
-              <div className="h-24 w-24 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center text-4xl font-display font-bold text-teal-600 mb-4" data-testid="avatar-staff">
+              <div className="h-20 w-20 rounded-full bg-background border-4 border-background shadow-lg flex items-center justify-center text-3xl font-display font-bold text-primary mb-4" data-testid="avatar-staff">
                 {staff.fullName.charAt(0)}
               </div>
-              <h2 className="text-2xl font-display font-bold text-foreground" data-testid="text-staff-name">{staff.fullName}</h2>
+              <h2 className="text-xl font-display font-bold text-foreground" data-testid="text-staff-name">{staff.fullName}</h2>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge variant={staff.status === "Active" ? "default" : "secondary"} className={staff.status === "Active" ? "bg-emerald-500/10 text-emerald-700" : ""} data-testid="badge-staff-status">
+                <Badge className={`rounded-full text-xs font-medium px-3 ${staff.status === "Active" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-600 border border-gray-200"}`} data-testid="badge-staff-status">
                   {staff.status}
                 </Badge>
-                <Badge variant="outline" className="font-mono bg-background" data-testid="badge-staff-type">
+                <Badge variant="outline" className="font-mono bg-background rounded-lg" data-testid="badge-staff-type">
                   {isTeacher ? "Teacher" : "Non-Teaching"}
                 </Badge>
               </div>
 
               <div className="mt-8 space-y-4">
                 <div className="flex items-center gap-3 text-sm">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0"><Phone className="h-4 w-4" /></div>
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0"><Phone className="h-4 w-4" /></div>
                   <div className="flex flex-col">
                     <span className="text-muted-foreground text-xs">Phone</span>
                     <span className="font-semibold text-foreground" data-testid="text-staff-phone">{staff.phoneNumber}</span>
@@ -107,12 +107,12 @@ export default function StaffProfile() {
 
                 {isTeacher && (staff as Teacher).subjects && (
                   <div className="flex items-center gap-3 text-sm">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0"><BookOpen className="h-4 w-4" /></div>
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0"><BookOpen className="h-4 w-4" /></div>
                     <div className="flex flex-col">
                       <span className="text-muted-foreground text-xs">Subjects</span>
                       <div className="flex flex-wrap gap-1 mt-1" data-testid="text-staff-subjects">
                         {(staff as Teacher).subjects.map((subject, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{subject}</Badge>
+                          <Badge key={i} variant="secondary" className="text-xs rounded-lg">{subject}</Badge>
                         ))}
                       </div>
                     </div>
@@ -122,14 +122,14 @@ export default function StaffProfile() {
                 {!isTeacher && (
                   <>
                     <div className="flex items-center gap-3 text-sm">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0"><Briefcase className="h-4 w-4" /></div>
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0"><Briefcase className="h-4 w-4" /></div>
                       <div className="flex flex-col">
                         <span className="text-muted-foreground text-xs">Position</span>
                         <span className="font-semibold text-foreground" data-testid="text-staff-position">{(staff as NonTeachingStaff).position}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-sm">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0"><FileText className="h-4 w-4" /></div>
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0"><FileText className="h-4 w-4" /></div>
                       <div className="flex flex-col">
                         <span className="text-muted-foreground text-xs">Contract Type</span>
                         <span className="font-semibold text-foreground" data-testid="text-staff-contract">{(staff as NonTeachingStaff).contractType}</span>
@@ -141,37 +141,37 @@ export default function StaffProfile() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border-border/50 bg-gradient-to-br from-slate-900 to-slate-800 text-white border-0">
+          <Card className="shadow-sm rounded-2xl border-0 bg-gradient-to-br from-primary to-emerald-800 text-white">
             <CardContent className="p-6">
-              <h3 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-6 flex items-center gap-2">
+              <h3 className="text-white/60 text-sm font-semibold uppercase tracking-wider mb-6 flex items-center gap-2">
                 <DollarSign className="h-4 w-4" /> Salary Breakdown
               </h3>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400 text-sm">Base Salary</span>
+                  <span className="text-white/60 text-sm">Base Salary</span>
                   <span className="font-semibold" data-testid="text-base-salary">{formatCurrency(staff.baseSalary, staff.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400 text-sm">Accommodation</span>
+                  <span className="text-white/60 text-sm">Accommodation</span>
                   <span className="font-semibold" data-testid="text-accommodation">{formatCurrency(staff.accommodationAllowance, staff.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400 text-sm">Transport</span>
+                  <span className="text-white/60 text-sm">Transport</span>
                   <span className="font-semibold" data-testid="text-transport">{formatCurrency(staff.transportAllowance, staff.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400 text-sm">Other Allowances</span>
+                  <span className="text-white/60 text-sm">Other Allowances</span>
                   <span className="font-semibold" data-testid="text-other-allowances">{formatCurrency(staff.otherAllowances, staff.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-red-400 text-sm">Deductions</span>
-                  <span className="font-semibold text-red-400" data-testid="text-deductions">-{formatCurrency(staff.deductions, staff.currency)}</span>
+                  <span className="text-red-300 text-sm">Deductions</span>
+                  <span className="font-semibold text-red-300" data-testid="text-deductions">-{formatCurrency(staff.deductions, staff.currency)}</span>
                 </div>
                 {staff.deductionNotes && (
-                  <p className="text-slate-500 text-xs italic" data-testid="text-deduction-notes">{staff.deductionNotes}</p>
+                  <p className="text-white/40 text-xs italic" data-testid="text-deduction-notes">{staff.deductionNotes}</p>
                 )}
-                <div className="border-t border-slate-700/50 pt-4 flex justify-between items-center">
+                <div className="border-t border-white/20 pt-4 flex justify-between items-center">
                   <span className="text-white font-semibold">Net Salary</span>
                   <span className="text-2xl font-display font-bold" data-testid="text-net-salary">{formatCurrency(netSalary, staff.currency)}</span>
                 </div>
@@ -179,7 +179,7 @@ export default function StaffProfile() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full mt-4 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                  className="w-full mt-4 border-white/30 text-white hover:bg-white/10 hover:text-white rounded-xl"
                   onClick={() => handleDownloadPayslip()}
                   data-testid="button-download-payslip"
                 >
@@ -192,42 +192,41 @@ export default function StaffProfile() {
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          <Card className="shadow-sm border-border/50 h-full flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 bg-muted/20 border-b border-border/50 pb-4">
-              <CardTitle className="text-xl font-display" data-testid="text-payroll-history-title">Payroll History</CardTitle>
+          <Card className="shadow-sm rounded-2xl border-border/40 h-full flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 bg-muted/20 border-b border-border/30 pb-4">
+              <CardTitle className="text-lg font-display" data-testid="text-payroll-history-title">Payroll History</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 p-0">
               {payrollLoading ? (
                 <div className="h-48 flex items-center justify-center text-muted-foreground">Loading payroll history...</div>
               ) : !payrollHistory || payrollHistory.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center p-12 text-muted-foreground">
-                  <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                  <div className="h-16 w-16 bg-muted rounded-2xl flex items-center justify-center mb-4">
                     <Clock className="h-8 w-8 text-muted-foreground/50" />
                   </div>
                   <p className="font-medium text-lg text-foreground" data-testid="text-no-payroll">No payroll records yet</p>
                   <p className="text-sm mt-1">Payroll entries will appear here once processed.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-border/50">
+                <div className="divide-y divide-border/30">
                   {payrollHistory.map((item: any) => (
-                    <div key={item.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/10 transition-colors" data-testid={`row-payroll-${item.id}`}>
+                    <div key={item.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/10 transition-colors" data-testid={`row-payroll-${item.id}`}>
                       <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
-                          <DollarSign className="h-6 w-6" />
+                        <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <DollarSign className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="font-bold text-lg text-foreground" data-testid={`text-payroll-amount-${item.id}`}>
+                          <p className="font-bold text-foreground" data-testid={`text-payroll-amount-${item.id}`}>
                             {formatCurrency(item.amount, item.currency)}
                           </p>
                           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
-                            <span data-testid={`text-payroll-month-${item.id}`}>{item.payrollMonth}</span>
+                            <span className="text-xs" data-testid={`text-payroll-month-${item.id}`}>{item.payrollMonth}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge
-                          variant={item.payrollStatus === "Approved" ? "default" : "secondary"}
-                          className={item.payrollStatus === "Approved" ? "bg-emerald-500/10 text-emerald-700" : ""}
+                          className={`rounded-full text-xs font-medium px-3 ${item.payrollStatus === "Approved" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-600 border border-gray-200"}`}
                           data-testid={`badge-payroll-status-${item.id}`}
                         >
                           {item.payrollStatus}
@@ -238,6 +237,7 @@ export default function StaffProfile() {
                           onClick={() => handleDownloadPayslip(item.payrollMonth)}
                           data-testid={`button-payslip-${item.id}`}
                           title="Download Payslip"
+                          className="rounded-xl h-8 w-8"
                         >
                           <FileDown className="h-4 w-4" />
                         </Button>

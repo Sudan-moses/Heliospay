@@ -7,7 +7,7 @@ A web-based School Payment Recording System for private primary and secondary sc
 - **Frontend**: React + Vite, Shadcn UI, TanStack Query, Wouter routing
 - **Backend**: Express.js, Drizzle ORM, PostgreSQL
 - **Auth**: Replit Auth (sessions/users tables) with RBAC (Admin/Bursar/Principal/Suspended/Pending roles)
-- **Styling**: Tailwind CSS with dark mode support
+- **Styling**: Tailwind CSS with Deep Forest Green monochromatic theme (#1B4332), white sidebar, light gray canvas (#F8F9FA), generous border-radius (1rem base)
 
 ## Key Features
 
@@ -96,3 +96,18 @@ A web-based School Payment Recording System for private primary and secondary sc
 - PDF receipts embed QR codes linking to /verify/receipt/{receiptNumber} for public verification
 - Fee presets define expected fees per class/term/feeType; auto-populate student tuitionFee on enrollment
 - Student form auto-populates tuition fee from presets when class+currency selected (manual override allowed)
+
+## UI Theme
+
+- **Primary**: Deep Forest Green `--primary: 153 40% 18%` (#1B4332)
+- **Background**: `--background: 210 11% 97%` (#F8F9FA) light gray canvas
+- **Sidebar**: White (`--sidebar: 0 0% 100%`), active item: `bg-primary/10 text-primary border-l-[3px] border-primary`
+- **Cards**: `rounded-2xl shadow-sm border-border/40`, white background
+- **Buttons**: `rounded-xl`, primary = solid forest green + white text
+- **Status badges**: `rounded-full` pills (emerald for Active, gray for Inactive, red for errors)
+- **Category badges**: `rounded-lg` informational tags with multi-hue colors for visual scanning
+- **Avatars**: Circular (`h-10 w-10 rounded-full bg-primary/10`)
+- **Profile pages**: Green gradient header (`from-primary to-emerald-600`)
+- **Salary card**: Dark green gradient card (`from-primary to-emerald-800 text-white`)
+- **Tables**: Uppercase tracking-wide header text, `bg-muted/30` header background
+- **Border radius base**: `--radius: 1rem` (lg=16px, md=12px, sm=8px)

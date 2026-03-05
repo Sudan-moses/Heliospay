@@ -49,37 +49,38 @@ export default function StudentsPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Students Directory</h1>
-          <p className="text-muted-foreground mt-1">Manage enrollment and financial status</p>
+          <h1 className="text-2xl font-display font-bold text-foreground">Students Directory</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Manage enrollment and financial status</p>
         </div>
         {canEdit && (
-          <Button onClick={openCreate} className="hover-elevate shadow-md font-semibold h-11 px-6">
-            <Plus className="mr-2 h-5 w-5" /> Add Student
+          <Button onClick={openCreate} className="rounded-xl font-semibold h-11 px-6 shadow-sm" data-testid="button-add-student">
+            <Plus className="mr-2 h-5 w-5" /> Admit Student
           </Button>
         )}
       </div>
 
-      <Card className="shadow-md border-border/50 overflow-hidden">
-        <div className="p-4 border-b border-border/50 bg-muted/20">
+      <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
+        <div className="p-4 border-b border-border/30 bg-muted/20">
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search by name or admission number..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-11 bg-background border-border/50 focus-visible:ring-primary/20"
+              className="pl-10 h-10 bg-background rounded-xl border-border/40 focus-visible:ring-primary/20"
+              data-testid="input-search-students"
             />
           </div>
         </div>
         
         <Table>
-          <TableHeader className="bg-muted/50">
+          <TableHeader className="bg-muted/30">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold text-foreground">Student Details</TableHead>
-              <TableHead className="font-semibold text-foreground">Class</TableHead>
-              <TableHead className="font-semibold text-foreground">Status</TableHead>
-              <TableHead className="font-semibold text-foreground text-right">Tuition Fee</TableHead>
-              <TableHead className="font-semibold text-foreground text-right">Balance</TableHead>
+              <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Student Details</TableHead>
+              <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Class</TableHead>
+              <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Status</TableHead>
+              <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-right">Tuition Fee</TableHead>
+              <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-right">Balance</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -94,45 +95,50 @@ export default function StudentsPage() {
               </TableRow>
             ) : (
               students?.map((student) => (
-                <TableRow key={student.id} className="hover:bg-muted/30 transition-colors group">
+                <TableRow key={student.id} className="hover:bg-muted/20 transition-colors group">
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-foreground">{student.fullName}</span>
-                      <span className="text-xs font-mono text-muted-foreground">{student.admissionNumber}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                        {student.fullName.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-foreground text-sm">{student.fullName}</span>
+                        <span className="text-xs font-mono text-muted-foreground">{student.admissionNumber}</span>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground font-medium">{student.classGrade}</TableCell>
+                  <TableCell className="text-muted-foreground font-medium text-sm">{student.classGrade}</TableCell>
                   <TableCell>
-                    <Badge variant={student.status === 'Active' ? 'default' : 'secondary'} className={student.status === 'Active' ? 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20' : ''}>
+                    <Badge className={`rounded-full text-xs font-medium px-3 ${student.status === 'Active' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'}`}>
                       {student.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(student.tuitionFee, student.currency)}</TableCell>
+                  <TableCell className="text-right font-medium text-sm">{formatCurrency(student.tuitionFee, student.currency)}</TableCell>
                   <TableCell className="text-right">
-                    <span className={student.remainingBalance > 0 ? "text-destructive font-bold" : "text-emerald-600 font-bold"}>
+                    <span className={`font-bold text-sm ${student.remainingBalance > 0 ? "text-red-500" : "text-emerald-600"}`}>
                       {formatCurrency(student.remainingBalance, student.currency)}
                     </span>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[160px]">
+                      <DropdownMenuContent align="end" className="w-[160px] rounded-xl">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild className="cursor-pointer">
+                        <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
                           <Link href={`/students/${student.id}`} className="flex w-full items-center">
                             <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Profile
                           </Link>
                         </DropdownMenuItem>
                         {canEdit && (
                           <>
-                            <DropdownMenuItem onClick={() => openEdit(student)} className="cursor-pointer">
+                            <DropdownMenuItem onClick={() => openEdit(student)} className="cursor-pointer rounded-lg">
                               <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setDeleteId(student.id)} className="cursor-pointer text-destructive focus:text-destructive">
+                            <DropdownMenuItem onClick={() => setDeleteId(student.id)} className="cursor-pointer text-destructive focus:text-destructive rounded-lg">
                               <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                           </>
@@ -158,9 +164,9 @@ export default function StudentsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel className="h-11 hover-elevate border-border">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="h-11 rounded-xl border-border">Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              className="h-11 bg-destructive hover:bg-destructive/90 text-destructive-foreground hover-elevate"
+              className="h-11 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl"
               onClick={() => {
                 if (deleteId) deleteMutation.mutate(deleteId);
                 setDeleteId(null);

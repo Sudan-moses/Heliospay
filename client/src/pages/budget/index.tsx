@@ -19,20 +19,20 @@ const EXPENSE_CATEGORIES = ["Rent", "Maintenance", "Security", "Salaries", "Util
 const TERMS = ["Term 1", "Term 2", "Term 3"];
 
 const categoryColors: Record<string, string> = {
-  Rent: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
-  Maintenance: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800",
-  Security: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800",
-  Salaries: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
-  Utilities: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800",
-  Supplies: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
-  Transport: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800",
-  Other: "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800",
+  Rent: "bg-blue-50 text-blue-700 border-blue-200",
+  Maintenance: "bg-amber-50 text-amber-700 border-amber-200",
+  Security: "bg-red-50 text-red-700 border-red-200",
+  Salaries: "bg-purple-50 text-purple-700 border-purple-200",
+  Utilities: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  Supplies: "bg-green-50 text-green-700 border-green-200",
+  Transport: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  Other: "bg-gray-50 text-gray-700 border-gray-200",
 };
 
 function getStatusBadge(status: string) {
-  if (status === "Over Budget") return <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" data-testid="badge-status-over">{status}</Badge>;
-  if (status === "On Budget") return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800" data-testid="badge-status-on">{status}</Badge>;
-  return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800" data-testid="badge-status-under">{status}</Badge>;
+  if (status === "Over Budget") return <Badge className="bg-red-50 text-red-700 border border-red-200 rounded-full text-xs" data-testid="badge-status-over">{status}</Badge>;
+  if (status === "On Budget") return <Badge className="bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs" data-testid="badge-status-on">{status}</Badge>;
+  return <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs" data-testid="badge-status-under">{status}</Badge>;
 }
 
 export default function BudgetPage() {
@@ -100,10 +100,10 @@ export default function BudgetPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground" data-testid="text-budget-title">Budget Tracking</h1>
-          <p className="text-muted-foreground mt-1">Set and monitor term budgets against actual expenses</p>
+          <p className="text-muted-foreground mt-1 text-sm">Set and monitor term budgets against actual expenses</p>
         </div>
         {canEdit && (
-          <Button onClick={openCreateForm} data-testid="button-add-budget">
+          <Button onClick={openCreateForm} className="rounded-xl font-semibold shadow-sm" data-testid="button-add-budget">
             <Plus className="mr-2 h-5 w-5" /> Add Budget Item
           </Button>
         )}
@@ -113,7 +113,7 @@ export default function BudgetPage() {
         <div className="space-y-1">
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Term</Label>
           <Select value={term} onValueChange={setTerm} data-testid="select-term">
-            <SelectTrigger className="w-[140px]" data-testid="select-term-trigger">
+            <SelectTrigger className="w-[140px] rounded-xl" data-testid="select-term-trigger">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -127,38 +127,38 @@ export default function BudgetPage() {
             value={academicYear}
             onChange={(e) => setAcademicYear(e.target.value)}
             placeholder="e.g. 2023/2024"
-            className="w-[160px]"
+            className="w-[160px] rounded-xl"
             data-testid="input-academic-year"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="shadow-sm border-border/50 p-5">
+        <Card className="shadow-sm rounded-2xl border-border/40 border-l-4 border-l-primary p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Budget (UGX)</p>
-          <p className="text-xl font-display font-bold mt-1" data-testid="text-budget-total-ugx">{formatCurrency(totalEstimatedUGX, "UGX")}</p>
+          <p className="text-2xl font-display font-bold mt-2" data-testid="text-budget-total-ugx">{formatCurrency(totalEstimatedUGX, "UGX")}</p>
         </Card>
-        <Card className="shadow-sm border-border/50 p-5">
+        <Card className="shadow-sm rounded-2xl border-border/40 border-l-4 border-l-emerald-500 p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Budget (USD)</p>
-          <p className="text-xl font-display font-bold mt-1" data-testid="text-budget-total-usd">{formatCurrency(totalEstimatedUSD, "USD")}</p>
+          <p className="text-2xl font-display font-bold mt-2" data-testid="text-budget-total-usd">{formatCurrency(totalEstimatedUSD, "USD")}</p>
         </Card>
       </div>
 
       <Tabs defaultValue="items" className="space-y-4">
-        <TabsList data-testid="tabs-budget">
-          <TabsTrigger value="items" data-testid="tab-budget-items">Budget Items</TabsTrigger>
-          <TabsTrigger value="comparison" data-testid="tab-budget-comparison">Budget vs Actual</TabsTrigger>
+        <TabsList className="rounded-xl bg-muted/60 p-1" data-testid="tabs-budget">
+          <TabsTrigger value="items" className="rounded-lg" data-testid="tab-budget-items">Budget Items</TabsTrigger>
+          <TabsTrigger value="comparison" className="rounded-lg" data-testid="tab-budget-comparison">Budget vs Actual</TabsTrigger>
         </TabsList>
 
         <TabsContent value="items">
-          <Card className="shadow-md border-border/50 overflow-hidden">
+          <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold text-foreground">Category</TableHead>
-                  <TableHead className="font-semibold text-foreground">Currency</TableHead>
-                  <TableHead className="font-semibold text-foreground text-right">Estimated Amount</TableHead>
-                  {canEdit && <TableHead className="w-[100px] text-right">Actions</TableHead>}
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Category</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Currency</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-right">Estimated Amount</TableHead>
+                  {canEdit && <TableHead className="w-[100px] text-right"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -176,20 +176,20 @@ export default function BudgetPage() {
                   </TableRow>
                 ) : (
                   budgetItems.map((item) => (
-                    <TableRow key={item.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-budget-${item.id}`}>
+                    <TableRow key={item.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-budget-${item.id}`}>
                       <TableCell>
-                        <Badge variant="outline" className={categoryColors[item.category] || categoryColors.Other}>
+                        <Badge variant="outline" className={`rounded-lg ${categoryColors[item.category] || categoryColors.Other}`}>
                           {item.category}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{item.currency}</TableCell>
-                      <TableCell className="text-right font-bold">{formatCurrency(item.estimatedAmount, item.currency)}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{item.currency}</TableCell>
+                      <TableCell className="text-right font-bold text-sm">{formatCurrency(item.estimatedAmount, item.currency)}</TableCell>
                       {canEdit && (
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => openEditForm(item)} data-testid={`button-edit-budget-${item.id}`}>
+                          <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8" onClick={() => openEditForm(item)} data-testid={`button-edit-budget-${item.id}`}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(item.id)} disabled={deleteMutation.isPending} data-testid={`button-delete-budget-${item.id}`}>
+                          <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8" onClick={() => deleteMutation.mutate(item.id)} disabled={deleteMutation.isPending} data-testid={`button-delete-budget-${item.id}`}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -203,15 +203,15 @@ export default function BudgetPage() {
         </TabsContent>
 
         <TabsContent value="comparison" className="space-y-6">
-          <Card className="shadow-md border-border/50 overflow-hidden">
+          <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold text-foreground">Category</TableHead>
-                  <TableHead className="font-semibold text-foreground text-right">Estimated</TableHead>
-                  <TableHead className="font-semibold text-foreground text-right">Actual</TableHead>
-                  <TableHead className="font-semibold text-foreground text-right">Variance</TableHead>
-                  <TableHead className="font-semibold text-foreground text-center">Status</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Category</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-right">Estimated</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-right">Actual</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-right">Variance</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -229,19 +229,19 @@ export default function BudgetPage() {
                   </TableRow>
                 ) : (
                   comparison.map((row, idx) => (
-                    <TableRow key={idx} className="hover:bg-muted/30 transition-colors" data-testid={`row-comparison-${idx}`}>
+                    <TableRow key={idx} className="hover:bg-muted/20 transition-colors" data-testid={`row-comparison-${idx}`}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={categoryColors[row.category] || categoryColors.Other}>
+                          <Badge variant="outline" className={`rounded-lg ${categoryColors[row.category] || categoryColors.Other}`}>
                             {row.category}
                           </Badge>
                           <span className="text-xs text-muted-foreground">({row.currency})</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(row.estimated, row.currency)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(row.actual, row.currency)}</TableCell>
+                      <TableCell className="text-right font-medium text-sm">{formatCurrency(row.estimated, row.currency)}</TableCell>
+                      <TableCell className="text-right font-medium text-sm">{formatCurrency(row.actual, row.currency)}</TableCell>
                       <TableCell className="text-right">
-                        <span className={`font-bold flex items-center justify-end gap-1 ${row.variance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        <span className={`font-bold text-sm flex items-center justify-end gap-1 ${row.variance >= 0 ? "text-emerald-600" : "text-red-500"}`}>
                           {row.variance > 0 && <TrendingDown className="h-4 w-4" />}
                           {row.variance < 0 && <TrendingUp className="h-4 w-4" />}
                           {row.variance === 0 && <Minus className="h-4 w-4" />}
@@ -257,25 +257,26 @@ export default function BudgetPage() {
           </Card>
 
           {chartData.length > 0 && (
-            <Card className="shadow-md border-border/50 p-6">
-              <h3 className="font-display font-bold text-foreground mb-4" data-testid="text-chart-title">Estimated vs Actual by Category</h3>
+            <Card className="shadow-sm rounded-2xl border-border/40 p-6">
+              <h3 className="font-display font-semibold text-foreground mb-4" data-testid="text-chart-title">Estimated vs Actual by Category</h3>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="category" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                  <BarChart data={chartData} barCategoryGap="25%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                    <XAxis dataKey="category" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "hsl(var(--card))",
                         border: "1px solid hsl(var(--border))",
-                        borderRadius: "6px",
+                        borderRadius: "12px",
+                        fontSize: "13px",
                       }}
                       labelStyle={{ color: "hsl(var(--foreground))" }}
                     />
                     <Legend />
-                    <Bar dataKey="Estimated" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Actual" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Estimated" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="Actual" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -285,15 +286,15 @@ export default function BudgetPage() {
       </Tabs>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent data-testid="dialog-budget-form">
+        <DialogContent className="rounded-2xl" data-testid="dialog-budget-form">
           <DialogHeader>
-            <DialogTitle>{editingBudget ? "Edit Budget Item" : "Add Budget Item"}</DialogTitle>
+            <DialogTitle className="font-display">{editingBudget ? "Edit Budget Item" : "Add Budget Item"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Category</Label>
               <Select value={formCategory} onValueChange={setFormCategory}>
-                <SelectTrigger data-testid="select-budget-category">
+                <SelectTrigger className="rounded-xl" data-testid="select-budget-category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,13 +310,14 @@ export default function BudgetPage() {
                 onChange={(e) => setFormAmount(e.target.value)}
                 placeholder="Enter amount"
                 min={0}
+                className="rounded-xl"
                 data-testid="input-budget-amount"
               />
             </div>
             <div className="space-y-2">
               <Label>Currency</Label>
               <Select value={formCurrency} onValueChange={setFormCurrency}>
-                <SelectTrigger data-testid="select-budget-currency">
+                <SelectTrigger className="rounded-xl" data-testid="select-budget-currency">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,10 +328,11 @@ export default function BudgetPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)} data-testid="button-cancel-budget">Cancel</Button>
+            <Button variant="outline" onClick={() => setFormOpen(false)} className="rounded-xl" data-testid="button-cancel-budget">Cancel</Button>
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
+              className="rounded-xl"
               data-testid="button-save-budget"
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

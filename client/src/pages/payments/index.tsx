@@ -48,7 +48,7 @@ function DetailRow({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+    <div className="flex items-center justify-between py-2.5 border-b border-border/30 last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
       {children ? (
         <span data-testid={testId}>{children}</span>
@@ -146,26 +146,26 @@ export default function PaymentsPage() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Transaction Log</h1>
-          <p className="text-muted-foreground mt-1">View all recorded payments across the system</p>
+          <h1 className="text-2xl font-display font-bold text-foreground">Transaction Log</h1>
+          <p className="text-muted-foreground mt-1 text-sm">View all recorded payments across the system</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setFormOpen(true)} className="hover-elevate shadow-lg shadow-primary/20 font-semibold h-11 px-6 bg-gradient-to-r from-primary to-primary/90">
+          <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold h-11 px-6 shadow-sm" data-testid="button-record-payment">
             <Plus className="mr-2 h-5 w-5" /> Record Payment
           </Button>
         )}
       </div>
 
       <Tabs defaultValue="all-payments" data-testid="tabs-payments">
-        <TabsList data-testid="tabs-list-payments">
-          <TabsTrigger value="all-payments" data-testid="tab-all-payments">All Payments</TabsTrigger>
-          <TabsTrigger value="verify-receipt" data-testid="tab-verify-receipt">Verify Receipt</TabsTrigger>
+        <TabsList className="rounded-xl bg-muted/60 p-1" data-testid="tabs-list-payments">
+          <TabsTrigger value="all-payments" className="rounded-lg" data-testid="tab-all-payments">All Payments</TabsTrigger>
+          <TabsTrigger value="verify-receipt" className="rounded-lg" data-testid="tab-verify-receipt">Verify Receipt</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all-payments" data-testid="tab-content-all-payments">
           <div className="flex flex-wrap items-center gap-3 mb-4" data-testid="master-report-controls">
             <Select value={reportTerm} onValueChange={setReportTerm}>
-              <SelectTrigger className="w-[140px] h-9" data-testid="select-report-term">
+              <SelectTrigger className="w-[140px] h-9 rounded-xl" data-testid="select-report-term">
                 <SelectValue placeholder="All Terms" />
               </SelectTrigger>
               <SelectContent>
@@ -176,7 +176,7 @@ export default function PaymentsPage() {
               </SelectContent>
             </Select>
             <Select value={reportClass} onValueChange={setReportClass}>
-              <SelectTrigger className="w-[160px] h-9" data-testid="select-report-class">
+              <SelectTrigger className="w-[160px] h-9 rounded-xl" data-testid="select-report-class">
                 <SelectValue placeholder="All Classes" />
               </SelectTrigger>
               <SelectContent>
@@ -192,6 +192,7 @@ export default function PaymentsPage() {
               size="sm"
               onClick={handleDownloadMasterReport}
               disabled={isGeneratingReport}
+              className="rounded-xl"
               data-testid="button-download-master-report"
             >
               {isGeneratingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
@@ -199,30 +200,30 @@ export default function PaymentsPage() {
             </Button>
           </div>
 
-          <Card className="shadow-md border-border/50 overflow-hidden">
-            <div className="p-4 border-b border-border/50 bg-muted/20">
+          <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
+            <div className="p-4 border-b border-border/30 bg-muted/20">
               <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search by student or receipt number..." 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 h-11 bg-background border-border/50 focus-visible:ring-primary/20"
+                  className="pl-10 h-10 bg-background rounded-xl border-border/40 focus-visible:ring-primary/20"
                   data-testid="input-search-payments"
                 />
               </div>
             </div>
 
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold text-foreground">Receipt Number</TableHead>
-                  <TableHead className="font-semibold text-foreground">Date</TableHead>
-                  <TableHead className="font-semibold text-foreground">Student</TableHead>
-                  <TableHead className="font-semibold text-foreground">Term</TableHead>
-                  <TableHead className="font-semibold text-foreground">Fee Type</TableHead>
-                  <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
-                  <TableHead className="w-[100px] text-right">Actions</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Receipt</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Date</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Student</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Term</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide">Fee Type</TableHead>
+                  <TableHead className="font-semibold text-foreground text-xs uppercase tracking-wide text-right">Amount</TableHead>
+                  <TableHead className="w-[100px] text-right"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,28 +237,28 @@ export default function PaymentsPage() {
                   </TableRow>
                 ) : (
                   filteredPayments?.sort((a, b) => new Date(b.paymentDate!).getTime() - new Date(a.paymentDate!).getTime()).map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-payment-${payment.id}`}>
+                    <TableRow key={payment.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-payment-${payment.id}`}>
                       <TableCell>
-                        <span className="font-mono text-sm font-bold px-2 py-1 bg-muted rounded-md border border-border/50">{payment.receiptNumber}</span>
+                        <span className="font-mono text-xs font-semibold px-2.5 py-1 bg-muted/60 rounded-lg border border-border/30">{payment.receiptNumber}</span>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-sm">
                         {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd, yyyy HH:mm') : ''}
                       </TableCell>
-                      <TableCell className="font-semibold text-foreground">{payment.studentName}</TableCell>
-                      <TableCell className="text-muted-foreground">{(payment as any).term || "—"}</TableCell>
+                      <TableCell className="font-semibold text-foreground text-sm">{payment.studentName}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{(payment as any).term || "—"}</TableCell>
                       <TableCell>
-                        <span className="text-sm px-2 py-0.5 bg-muted rounded-md border border-border/50">{(payment as any).feeType || "—"}</span>
+                        <Badge variant="secondary" className="rounded-lg font-normal text-xs">{(payment as any).feeType || "—"}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className="font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-200">
+                        <span className="font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl text-sm">
                           +{formatCurrency(payment.amount, payment.currency)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="hover-elevate hover:text-primary" onClick={() => handlePrint(payment)} title="Print Receipt">
+                        <Button variant="ghost" size="icon" className="hover:text-primary rounded-xl h-8 w-8" onClick={() => handlePrint(payment)} title="Print Receipt">
                           <Printer className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" title="Download PDF" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => {
+                        <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8" title="Download PDF" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => {
                           generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment), branding).catch(() => {});
                         }}>
                           <FileDown className="h-4 w-4" />
@@ -273,12 +274,12 @@ export default function PaymentsPage() {
 
         <TabsContent value="verify-receipt" data-testid="tab-content-verify-receipt">
           <div className="flex items-center justify-center min-h-[50vh]">
-            <Card className="w-full max-w-lg">
+            <Card className="w-full max-w-lg rounded-2xl shadow-sm border-border/40">
               <CardHeader className="text-center pb-2">
-                <div className="mx-auto mb-3 h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <ShieldCheck className="h-6 w-6 text-primary" />
+                <div className="mx-auto mb-3 h-14 w-14 bg-primary/10 rounded-2xl flex items-center justify-center">
+                  <ShieldCheck className="h-7 w-7 text-primary" />
                 </div>
-                <CardTitle className="text-2xl font-bold" data-testid="text-verify-heading">
+                <CardTitle className="text-xl font-bold" data-testid="text-verify-heading">
                   Verify Payment Receipt
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -293,11 +294,13 @@ export default function PaymentsPage() {
                     value={receiptNumber}
                     onChange={(e) => setReceiptNumber(e.target.value)}
                     onKeyDown={handleVerifyKeyDown}
+                    className="rounded-xl"
                   />
                   <Button
                     data-testid="button-verify"
                     onClick={handleVerify}
                     disabled={isVerifying || !receiptNumber.trim()}
+                    className="rounded-xl"
                   >
                     {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                     <span className="ml-2">Verify</span>
@@ -314,20 +317,20 @@ export default function PaymentsPage() {
                   <div data-testid="verify-result">
                     {verifyResult.valid && verifyResult.payment && verifyResult.student ? (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-900">
-                          <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400 shrink-0" />
+                        <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                          <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
                           <div>
-                            <p className="font-semibold text-green-800 dark:text-green-300" data-testid="text-valid-status">
+                            <p className="font-semibold text-emerald-700" data-testid="text-valid-status">
                               Valid Receipt
                             </p>
-                            <p className="text-sm text-green-700 dark:text-green-400">
+                            <p className="text-sm text-emerald-600">
                               This receipt is authentic and verified.
                             </p>
                           </div>
-                          <Badge className="ml-auto bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 no-default-hover-elevate no-default-active-elevate">Valid</Badge>
+                          <Badge className="ml-auto bg-emerald-100 text-emerald-700 rounded-lg no-default-hover-elevate no-default-active-elevate">Valid</Badge>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-1">
                           <DetailRow label="Student Name" value={verifyResult.student.fullName} testId="text-student-name" />
                           <DetailRow label="Admission No." value={verifyResult.student.admissionNumber} testId="text-admission-number" />
                           <DetailRow label="Class" value={verifyResult.student.classGrade} testId="text-class-grade" />
@@ -337,7 +340,7 @@ export default function PaymentsPage() {
                             testId="text-amount"
                           />
                           <DetailRow label="Fee Type" testId="text-fee-type">
-                            <Badge variant="secondary">{verifyResult.payment.feeType}</Badge>
+                            <Badge variant="secondary" className="rounded-lg">{verifyResult.payment.feeType}</Badge>
                           </DetailRow>
                           <DetailRow label="Term" value={verifyResult.payment.term} testId="text-term" />
                           <DetailRow
@@ -353,17 +356,17 @@ export default function PaymentsPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-900">
-                        <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 shrink-0" />
+                      <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
+                        <XCircle className="h-6 w-6 text-red-500 shrink-0" />
                         <div>
-                          <p className="font-semibold text-red-800 dark:text-red-300" data-testid="text-invalid-status">
+                          <p className="font-semibold text-red-700" data-testid="text-invalid-status">
                             Invalid Receipt
                           </p>
-                          <p className="text-sm text-red-700 dark:text-red-400">
+                          <p className="text-sm text-red-600">
                             No payment found with this receipt number.
                           </p>
                         </div>
-                        <Badge className="ml-auto bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 no-default-hover-elevate no-default-active-elevate" variant="destructive">Invalid</Badge>
+                        <Badge className="ml-auto bg-red-100 text-red-700 rounded-lg no-default-hover-elevate no-default-active-elevate" variant="destructive">Invalid</Badge>
                       </div>
                     )}
                   </div>

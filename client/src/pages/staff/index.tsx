@@ -6,7 +6,6 @@ import { formatCurrency } from "@/lib/utils";
 import { type Teacher, type NonTeachingStaff } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Pencil, Trash2, Info, Eye } from "lucide-react";
 import { Link } from "wouter";
@@ -41,66 +40,54 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="relative max-w-md w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search teachers..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-11 bg-background border-border/50 focus-visible:ring-primary/20"
+            className="pl-10 h-10 bg-background rounded-xl border-border/40 focus-visible:ring-primary/20"
             data-testid="input-search-teachers"
           />
         </div>
         {canEdit && (
-          <Button onClick={() => setFormOpen(true)} className="shadow-lg shadow-teal-500/20 font-semibold bg-gradient-to-r from-teal-600 to-teal-500" data-testid="button-add-teacher">
+          <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold shadow-sm" data-testid="button-add-teacher">
             <Plus className="mr-2 h-5 w-5" /> Add Teacher
           </Button>
         )}
       </div>
 
-      <Card className="shadow-md border-border/50 overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold text-foreground">Name</TableHead>
-              <TableHead className="font-semibold text-foreground">Phone</TableHead>
-              <TableHead className="font-semibold text-foreground">Subjects</TableHead>
-              <TableHead className="font-semibold text-foreground text-right">Net Salary</TableHead>
-              <TableHead className="font-semibold text-foreground">Status</TableHead>
-              <TableHead className="w-[120px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">Loading teachers...</TableCell>
-              </TableRow>
-            ) : filteredTeachers?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">No teachers found.</TableCell>
-              </TableRow>
-            ) : (
-              filteredTeachers?.map((teacher) => (
-                <TableRow key={teacher.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-teacher-${teacher.id}`}>
-                  <TableCell className="font-medium text-foreground" data-testid={`text-teacher-name-${teacher.id}`}>
-                    {teacher.fullName}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground" data-testid={`text-teacher-phone-${teacher.id}`}>
-                    {teacher.phoneNumber}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" data-testid={`badge-teacher-subjects-${teacher.id}`}>
-                      {teacher.subjects.length} {teacher.subjects.length === 1 ? "subject" : "subjects"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold" data-testid={`text-teacher-salary-${teacher.id}`}>
+      <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
+        <div className="divide-y divide-border/30">
+          {isLoading ? (
+            <div className="h-48 flex items-center justify-center text-muted-foreground">Loading teachers...</div>
+          ) : filteredTeachers?.length === 0 ? (
+            <div className="h-48 flex items-center justify-center text-muted-foreground">No teachers found.</div>
+          ) : (
+            filteredTeachers?.map((teacher) => (
+              <div key={teacher.id} className="flex items-center justify-between p-4 hover:bg-muted/20 transition-colors" data-testid={`row-teacher-${teacher.id}`}>
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                    {teacher.fullName.charAt(0)}
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="font-semibold text-foreground text-sm truncate" data-testid={`text-teacher-name-${teacher.id}`}>{teacher.fullName}</span>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs text-muted-foreground" data-testid={`text-teacher-phone-${teacher.id}`}>{teacher.phoneNumber}</span>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <Badge variant="secondary" className="rounded-lg text-[10px] h-5 px-2" data-testid={`badge-teacher-subjects-${teacher.id}`}>
+                        {teacher.subjects.length} {teacher.subjects.length === 1 ? "subject" : "subjects"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                  <span className="text-sm font-semibold text-foreground hidden sm:inline" data-testid={`text-teacher-salary-${teacher.id}`}>
                     {(() => {
                       const netSalary = teacher.baseSalary + teacher.accommodationAllowance + teacher.transportAllowance + teacher.otherAllowances - teacher.deductions;
                       const hasBreakdown = teacher.accommodationAllowance > 0 || teacher.transportAllowance > 0 || teacher.otherAllowances > 0 || teacher.deductions > 0;
                       const salaryDisplay = formatCurrency(netSalary, teacher.currency);
 
-                      if (!hasBreakdown) {
-                        return salaryDisplay;
-                      }
+                      if (!hasBreakdown) return salaryDisplay;
 
                       return (
                         <TooltipProvider>
@@ -111,7 +98,7 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
                                 <Info className="h-3.5 w-3.5 text-muted-foreground" />
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent side="left" className="text-sm">
+                            <TooltipContent side="left" className="text-sm rounded-xl">
                               <div className="space-y-1">
                                 <div className="flex justify-between gap-4">
                                   <span>Base Salary:</span>
@@ -151,59 +138,57 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
                         </TooltipProvider>
                       );
                     })()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={teacher.status === "Active" ? "default" : "secondary"}
-                      data-testid={`badge-teacher-status-${teacher.id}`}
+                  </span>
+                  <Badge
+                    className={`rounded-full text-xs font-medium px-3 ${teacher.status === "Active" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-600 border border-gray-200"}`}
+                    data-testid={`badge-teacher-status-${teacher.id}`}
+                  >
+                    {teacher.status}
+                  </Badge>
+                  <div className="flex gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      asChild
+                      title="View Teacher"
+                      className="h-8 w-8 rounded-xl"
+                      data-testid={`button-view-teacher-${teacher.id}`}
                     >
-                      {teacher.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        asChild
-                        title="View Teacher"
-                        data-testid={`button-view-teacher-${teacher.id}`}
-                      >
-                        <Link href={`/staff/teacher/${teacher.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      {canEdit && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(teacher)}
-                            title="Edit Teacher"
-                            data-testid={`button-edit-teacher-${teacher.id}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:text-red-600"
-                            onClick={() => deleteMutation.mutate(teacher.id)}
-                            disabled={deleteMutation.isPending}
-                            title="Delete Teacher"
-                            data-testid={`button-delete-teacher-${teacher.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                      <Link href={`/staff/teacher/${teacher.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    {canEdit && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(teacher)}
+                          title="Edit Teacher"
+                          className="h-8 w-8 rounded-xl"
+                          data-testid={`button-edit-teacher-${teacher.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:text-red-600 h-8 w-8 rounded-xl"
+                          onClick={() => deleteMutation.mutate(teacher.id)}
+                          disabled={deleteMutation.isPending}
+                          title="Delete Teacher"
+                          data-testid={`button-delete-teacher-${teacher.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </Card>
 
       {canEdit && <TeacherFormDialog open={formOpen} onOpenChange={handleFormClose} teacher={editingTeacher} />}
@@ -238,116 +223,101 @@ function NonTeachingStaffTab({ canEdit }: { canEdit: boolean }) {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="relative max-w-md w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or position..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-11 bg-background border-border/50 focus-visible:ring-primary/20"
+            className="pl-10 h-10 bg-background rounded-xl border-border/40 focus-visible:ring-primary/20"
             data-testid="input-search-nts"
           />
         </div>
         {canEdit && (
-          <Button onClick={() => setFormOpen(true)} className="shadow-lg shadow-teal-500/20 font-semibold bg-gradient-to-r from-teal-600 to-teal-500" data-testid="button-add-nts">
+          <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold shadow-sm" data-testid="button-add-nts">
             <Plus className="mr-2 h-5 w-5" /> Add Staff
           </Button>
         )}
       </div>
 
-      <Card className="shadow-md border-border/50 overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold text-foreground">Name</TableHead>
-              <TableHead className="font-semibold text-foreground">Position</TableHead>
-              <TableHead className="font-semibold text-foreground">Phone</TableHead>
-              <TableHead className="font-semibold text-foreground">Contract</TableHead>
-              <TableHead className="font-semibold text-foreground text-right">Salary</TableHead>
-              <TableHead className="font-semibold text-foreground">Status</TableHead>
-              <TableHead className="w-[120px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">Loading staff...</TableCell>
-              </TableRow>
-            ) : filteredStaff?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">No non-teaching staff found.</TableCell>
-              </TableRow>
-            ) : (
-              filteredStaff?.map((staff) => (
-                <TableRow key={staff.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-nts-${staff.id}`}>
-                  <TableCell className="font-medium text-foreground" data-testid={`text-nts-name-${staff.id}`}>
-                    {staff.fullName}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground" data-testid={`text-nts-position-${staff.id}`}>
-                    {staff.position}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground" data-testid={`text-nts-phone-${staff.id}`}>
-                    {staff.phoneNumber}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" data-testid={`badge-nts-contract-${staff.id}`}>
-                      {staff.contractType}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold" data-testid={`text-nts-salary-${staff.id}`}>
-                    {formatCurrency(staff.baseSalary, staff.currency)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={staff.status === "Active" ? "default" : "secondary"}
-                      data-testid={`badge-nts-status-${staff.id}`}
-                    >
-                      {staff.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        asChild
-                        title="View Staff"
-                        data-testid={`button-view-nts-${staff.id}`}
-                      >
-                        <Link href={`/staff/non-teaching/${staff.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      {canEdit && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(staff)}
-                            title="Edit Staff"
-                            data-testid={`button-edit-nts-${staff.id}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:text-red-600"
-                            onClick={() => deleteMutation.mutate(staff.id)}
-                            disabled={deleteMutation.isPending}
-                            title="Delete Staff"
-                            data-testid={`button-delete-nts-${staff.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
+      <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
+        <div className="divide-y divide-border/30">
+          {isLoading ? (
+            <div className="h-48 flex items-center justify-center text-muted-foreground">Loading staff...</div>
+          ) : filteredStaff?.length === 0 ? (
+            <div className="h-48 flex items-center justify-center text-muted-foreground">No non-teaching staff found.</div>
+          ) : (
+            filteredStaff?.map((staff) => (
+              <div key={staff.id} className="flex items-center justify-between p-4 hover:bg-muted/20 transition-colors" data-testid={`row-nts-${staff.id}`}>
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                    {staff.fullName.charAt(0)}
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="font-semibold text-foreground text-sm truncate" data-testid={`text-nts-name-${staff.id}`}>{staff.fullName}</span>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs text-muted-foreground" data-testid={`text-nts-position-${staff.id}`}>{staff.position}</span>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground" data-testid={`text-nts-phone-${staff.id}`}>{staff.phoneNumber}</span>
+                      <Badge variant="secondary" className="rounded-lg text-[10px] h-5 px-2" data-testid={`badge-nts-contract-${staff.id}`}>
+                        {staff.contractType}
+                      </Badge>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                  <span className="text-sm font-semibold text-foreground hidden sm:inline" data-testid={`text-nts-salary-${staff.id}`}>
+                    {formatCurrency(staff.baseSalary, staff.currency)}
+                  </span>
+                  <Badge
+                    className={`rounded-full text-xs font-medium px-3 ${staff.status === "Active" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-600 border border-gray-200"}`}
+                    data-testid={`badge-nts-status-${staff.id}`}
+                  >
+                    {staff.status}
+                  </Badge>
+                  <div className="flex gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      asChild
+                      title="View Staff"
+                      className="h-8 w-8 rounded-xl"
+                      data-testid={`button-view-nts-${staff.id}`}
+                    >
+                      <Link href={`/staff/non-teaching/${staff.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    {canEdit && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(staff)}
+                          title="Edit Staff"
+                          className="h-8 w-8 rounded-xl"
+                          data-testid={`button-edit-nts-${staff.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:text-red-600 h-8 w-8 rounded-xl"
+                          onClick={() => deleteMutation.mutate(staff.id)}
+                          disabled={deleteMutation.isPending}
+                          title="Delete Staff"
+                          data-testid={`button-delete-nts-${staff.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </Card>
 
       {canEdit && <NonTeachingStaffFormDialog open={formOpen} onOpenChange={handleFormClose} staff={editingStaff} />}
@@ -363,13 +333,13 @@ export default function StaffPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground" data-testid="text-staff-title">Staff Management</h1>
-        <p className="text-muted-foreground mt-1">Manage teaching and non-teaching staff</p>
+        <p className="text-muted-foreground mt-1 text-sm">Manage teaching and non-teaching staff</p>
       </div>
 
       <Tabs defaultValue="teaching" className="w-full">
-        <TabsList className="mb-4" data-testid="tabs-staff">
-          <TabsTrigger value="teaching" data-testid="tab-teaching-staff">Teaching Staff</TabsTrigger>
-          <TabsTrigger value="non-teaching" data-testid="tab-non-teaching-staff">Non-Teaching Staff</TabsTrigger>
+        <TabsList className="mb-4 rounded-xl bg-muted/60 p-1" data-testid="tabs-staff">
+          <TabsTrigger value="teaching" className="rounded-lg" data-testid="tab-teaching-staff">Teaching Staff</TabsTrigger>
+          <TabsTrigger value="non-teaching" className="rounded-lg" data-testid="tab-non-teaching-staff">Non-Teaching Staff</TabsTrigger>
         </TabsList>
         <TabsContent value="teaching">
           <TeachingStaffTab canEdit={canEdit} />

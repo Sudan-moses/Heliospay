@@ -19,10 +19,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Payroll } from "@shared/schema";
 
 const statusBadgeVariants: Record<string, string> = {
-  Draft: "bg-gray-500/10 text-gray-700 border-gray-200 dark:text-gray-300 dark:border-gray-600",
-  Pending: "bg-yellow-500/10 text-yellow-700 border-yellow-200 dark:text-yellow-300 dark:border-yellow-600",
-  Approved: "bg-green-500/10 text-green-700 border-green-200 dark:text-green-300 dark:border-green-600",
-  Rejected: "bg-red-500/10 text-red-700 border-red-200 dark:text-red-300 dark:border-red-600",
+  Draft: "bg-gray-50 text-gray-700 border border-gray-200",
+  Pending: "bg-yellow-50 text-yellow-700 border border-yellow-200",
+  Approved: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  Rejected: "bg-red-50 text-red-700 border border-red-200",
 };
 
 function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin: boolean; branding?: BrandingParam }) {
@@ -33,58 +33,65 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
   const deleteMutation = useDeletePayroll();
 
   return (
-    <Card className="shadow-sm border-border/50 overflow-visible" data-testid={`card-payroll-${payroll.id}`}>
+    <Card className="shadow-sm rounded-2xl border-border/40 overflow-visible" data-testid={`card-payroll-${payroll.id}`}>
       <div
-        className="p-4 cursor-pointer flex flex-row flex-wrap items-center justify-between gap-3"
+        className="p-5 cursor-pointer flex flex-row flex-wrap items-center justify-between gap-3 hover:bg-muted/10 transition-colors rounded-2xl"
         onClick={() => setExpanded(!expanded)}
         data-testid={`button-expand-payroll-${payroll.id}`}
       >
         <div className="flex flex-row flex-wrap items-center gap-3">
-          <span className="font-display font-bold text-lg text-foreground" data-testid={`text-payroll-month-${payroll.id}`}>
-            {payroll.month}
-          </span>
-          <Badge variant="outline" className={statusBadgeVariants[payroll.status] || statusBadgeVariants.Draft} data-testid={`badge-payroll-status-${payroll.id}`}>
-            {payroll.status}
-          </Badge>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+            {payroll.month?.substring(0, 3) || "P"}
+          </div>
+          <div>
+            <span className="font-display font-bold text-foreground block" data-testid={`text-payroll-month-${payroll.id}`}>
+              {payroll.month}
+            </span>
+            <span className="text-xs text-muted-foreground" data-testid={`text-payroll-createdby-${payroll.id}`}>
+              by {payroll.createdBy} · {payroll.createdAt ? format(new Date(payroll.createdAt), "MMM dd, yyyy") : ""}
+            </span>
+          </div>
         </div>
-        <div className="flex flex-row flex-wrap items-center gap-4">
+        <div className="flex flex-row flex-wrap items-center gap-3">
           <span className="font-bold text-foreground" data-testid={`text-payroll-total-${payroll.id}`}>
             {formatCurrency(payroll.totalAmount, payroll.currency)}
           </span>
-          <span className="text-sm text-muted-foreground" data-testid={`text-payroll-createdby-${payroll.id}`}>
-            {payroll.createdBy}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {payroll.createdAt ? format(new Date(payroll.createdAt), "MMM dd, yyyy") : ""}
-          </span>
+          <Badge className={`rounded-full text-xs font-medium px-3 ${statusBadgeVariants[payroll.status] || statusBadgeVariants.Draft}`} data-testid={`badge-payroll-status-${payroll.id}`}>
+            {payroll.status}
+          </Badge>
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </div>
       </div>
 
       {expanded && (
-        <div className="border-t border-border/50 p-4 space-y-4">
+        <div className="border-t border-border/30 p-5 space-y-4">
           {detailLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-full rounded-lg" />
+              <Skeleton className="h-4 w-3/4 rounded-lg" />
             </div>
           ) : detail?.items && detail.items.length > 0 ? (
             <div className="space-y-2" data-testid={`list-payroll-items-${payroll.id}`}>
-              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Staff Salaries</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Staff Salaries</p>
               {detail.items.map((item: any) => (
-                <div key={item.id} className="flex flex-row flex-wrap items-center justify-between gap-2 py-1 px-2 rounded-md bg-muted/30" data-testid={`row-payroll-item-${item.id}`}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground" data-testid={`text-staff-name-${item.id}`}>{item.staffName || item.teacherName}</span>
-                    {item.staffType && (
-                      <Badge variant="outline" className="text-xs">
-                        {item.staffType === "teacher" ? "Teaching" : "Non-Teaching"}
-                      </Badge>
-                    )}
+                <div key={item.id} className="flex flex-row flex-wrap items-center justify-between gap-2 py-2.5 px-3 rounded-xl bg-muted/20" data-testid={`row-payroll-item-${item.id}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                      {(item.staffName || item.teacherName || "S").charAt(0)}
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-foreground" data-testid={`text-staff-name-${item.id}`}>{item.staffName || item.teacherName}</span>
+                      {item.staffType && (
+                        <Badge variant="secondary" className="ml-2 text-[10px] rounded-lg h-5 px-2">
+                          {item.staffType === "teacher" ? "Teaching" : "Non-Teaching"}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-foreground" data-testid={`text-staff-amount-${item.id}`}>{formatCurrency(item.amount, item.currency)}</span>
                     {(item.teacherId || item.nonTeachingStaffId) && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7" asChild data-testid={`button-view-staff-${item.id}`} title="View Profile">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" asChild data-testid={`button-view-staff-${item.id}`} title="View Profile">
                         <Link href={`/staff/${item.staffType === "non-teaching" ? "non-teaching" : "teacher"}/${item.nonTeachingStaffId || item.teacherId}`}>
                           <User className="h-3.5 w-3.5" />
                         </Link>
@@ -116,6 +123,7 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
                 <Button
                   onClick={() => approveMutation.mutate(payroll.id)}
                   disabled={approveMutation.isPending}
+                  className="rounded-xl"
                   data-testid={`button-approve-payroll-${payroll.id}`}
                 >
                   <CheckCircle className="mr-2 h-4 w-4" />
@@ -125,6 +133,7 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
                   variant="outline"
                   onClick={() => rejectMutation.mutate(payroll.id)}
                   disabled={rejectMutation.isPending}
+                  className="rounded-xl"
                   data-testid={`button-reject-payroll-${payroll.id}`}
                 >
                   <XCircle className="mr-2 h-4 w-4" />
@@ -136,7 +145,7 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:text-red-600"
+                className="hover:text-red-600 rounded-xl h-8 w-8"
                 onClick={() => deleteMutation.mutate(payroll.id)}
                 disabled={deleteMutation.isPending}
                 data-testid={`button-delete-payroll-${payroll.id}`}
@@ -147,7 +156,7 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
             {detail?.items && (
               <Button
                 variant="outline"
-                className="hover:text-blue-600"
+                className="rounded-xl"
                 onClick={() => generatePayrollReceiptPDF(payroll, detail?.items || [], branding)}
                 data-testid={`button-pdf-payroll-${payroll.id}`}
               >
@@ -199,10 +208,10 @@ export default function PayrollPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground" data-testid="text-payroll-title">Payroll</h1>
-          <p className="text-muted-foreground mt-1">Generate and manage staff payrolls</p>
+          <p className="text-muted-foreground mt-1 text-sm">Generate and manage staff payrolls</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setDialogOpen(true)} data-testid="button-generate-payroll">
+          <Button onClick={() => setDialogOpen(true)} className="rounded-xl font-semibold shadow-sm" data-testid="button-generate-payroll">
             <Plus className="mr-2 h-5 w-5" /> Generate Payroll
           </Button>
         )}
@@ -210,12 +219,12 @@ export default function PayrollPage() {
 
       {isLoading ? (
         <div className="space-y-4">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
         </div>
       ) : payrolls?.length === 0 ? (
-        <Card className="shadow-sm border-border/50 p-8 text-center">
+        <Card className="shadow-sm rounded-2xl border-border/40 p-8 text-center">
           <p className="text-muted-foreground" data-testid="text-no-payrolls">No payrolls found. Generate one to get started.</p>
         </Card>
       ) : (
@@ -227,9 +236,9 @@ export default function PayrollPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent data-testid="dialog-generate-payroll">
+        <DialogContent className="rounded-2xl" data-testid="dialog-generate-payroll">
           <DialogHeader>
-            <DialogTitle>Generate Payroll</DialogTitle>
+            <DialogTitle className="font-display">Generate Payroll</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -239,13 +248,14 @@ export default function PayrollPage() {
                 type="month"
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
+                className="rounded-xl"
                 data-testid="input-payroll-month"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="payroll-currency">Currency</Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger data-testid="select-payroll-currency">
+                <SelectTrigger className="rounded-xl" data-testid="select-payroll-currency">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -259,6 +269,7 @@ export default function PayrollPage() {
             <Button
               onClick={handleGenerate}
               disabled={!month || createMutation.isPending}
+              className="rounded-xl"
               data-testid="button-submit-generate-payroll"
             >
               {createMutation.isPending ? "Generating..." : "Generate"}
