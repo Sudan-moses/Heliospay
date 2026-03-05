@@ -57,6 +57,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/verify/receipt/:receiptNumber" component={VerifyReceiptPage} />
       <Route path="/verify-receipt" component={VerifyReceiptPage} />
       {!isAuthenticated ? <AuthPage /> : <ProtectedRoutes />}
     </Switch>

@@ -5,7 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
-import { insertBrandingSchema, insertNonTeachingStaffSchema, insertBudgetSchema } from "@shared/schema";
+import { insertBrandingSchema, insertNonTeachingStaffSchema, insertBudgetSchema, insertFeePresetSchema } from "@shared/schema";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
 export async function registerRoutes(
@@ -287,10 +287,12 @@ export async function registerRoutes(
     const result = await storage.getPaymentByReceiptNumber(receiptNumber);
     if (!result) return res.json({ valid: false });
     const { studentName, studentAdmissionNumber, studentClassGrade, ...paymentData } = result;
+    const branding = await storage.getBrandingSettings();
     res.json({
       valid: true,
       payment: paymentData,
       student: { fullName: studentName, admissionNumber: studentAdmissionNumber, classGrade: studentClassGrade },
+      branding: branding ? { schoolName: branding.schoolName, schoolAddress: branding.schoolAddress } : undefined,
     });
   });
 
@@ -425,6 +427,58 @@ export async function registerRoutes(
 
   app.delete('/api/budgets/:id', canModify, async (req, res) => {
     await storage.deleteBudget(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  // Fee presets routes
+  app.use('/api/fee-presets', isAuthenticated, blockInactive);
+
+  app.get('/api/fee-presets', async (req, res) => {
+    const classGrade = req.query.classGrade as string | undefined;
+    const currency = req.query.currency as string | undefined;
+    const presets = await storage.getFeePresets(classGrade, currency);
+    res.json(presets);
+  });
+
+  app.post('/api/fee-presets', isAdmin, async (req, res) => {
+    try {
+      const input = insertFeePresetSchema.extend({
+        amount: z.coerce.number().min(0),
+      }).parse(req.body);
+      const existing = await storage.getFeePresets();
+      const duplicate = existing.find(
+        (p) => p.classGrade === input.classGrade && p.term === input.term && p.feeType === input.feeType && p.currency === input.currency
+      );
+      if (duplicate) {
+        return res.status(409).json({ message: `A fee preset for ${input.classGrade} / ${input.term} / ${input.feeType} (${input.currency}) already exists. Please edit the existing one instead.` });
+      }
+      const preset = await storage.createFeePreset(input);
+      res.status(201).json(preset);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.put('/api/fee-presets/:id', isAdmin, async (req, res) => {
+    try {
+      const input = insertFeePresetSchema.partial().extend({
+        amount: z.coerce.number().min(0).optional(),
+      }).parse(req.body);
+      const preset = await storage.updateFeePreset(Number(req.params.id), input);
+      res.json(preset);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  app.delete('/api/fee-presets/:id', isAdmin, async (req, res) => {
+    await storage.deleteFeePreset(Number(req.params.id));
     res.status(204).send();
   });
 

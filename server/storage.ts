@@ -9,6 +9,7 @@ import {
   brandingSettings,
   nonTeachingStaff,
   budgets,
+  feePresets,
   type Student,
   type InsertStudent,
   type Payment,
@@ -28,6 +29,8 @@ import {
   type InsertNonTeachingStaff,
   type Budget,
   type InsertBudget,
+  type FeePreset,
+  type InsertFeePreset,
 } from "@shared/schema";
 import { eq, desc, ilike, or, sum, and, gte, lte, sql } from "drizzle-orm";
 
@@ -77,6 +80,12 @@ export interface IStorage {
   createBudget(data: InsertBudget): Promise<Budget>;
   updateBudget(id: number, data: Partial<InsertBudget>): Promise<Budget>;
   deleteBudget(id: number): Promise<void>;
+
+  getFeePresets(classGrade?: string, currency?: string): Promise<FeePreset[]>;
+  getFeePresetsForClass(classGrade: string, currency: string): Promise<FeePreset[]>;
+  createFeePreset(data: InsertFeePreset): Promise<FeePreset>;
+  updateFeePreset(id: number, data: Partial<InsertFeePreset>): Promise<FeePreset>;
+  deleteFeePreset(id: number): Promise<void>;
 
   getFinancialSummary(startDate: Date, endDate: Date, term?: string): Promise<{
     totalIncome: { UGX: number; USD: number };
@@ -129,6 +138,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStudent(studentData: InsertStudent): Promise<Student> {
+    if (studentData.classGrade && (!studentData.tuitionFee || studentData.tuitionFee === 0)) {
+      const presets = await this.getFeePresetsForClass(studentData.classGrade, studentData.currency || "UGX");
+      if (presets.length > 0) {
+        const totalFromPresets = presets.reduce((sum, p) => sum + p.amount, 0);
+        studentData = { ...studentData, tuitionFee: totalFromPresets };
+      }
+    }
     const [student] = await db.insert(students).values(studentData).returning();
     return student;
   }
@@ -475,6 +491,36 @@ export class DatabaseStorage implements IStorage {
         ...v,
       })),
     };
+  }
+
+  async getFeePresets(classGrade?: string, currency?: string): Promise<FeePreset[]> {
+    const conditions = [];
+    if (classGrade) conditions.push(eq(feePresets.classGrade, classGrade));
+    if (currency) conditions.push(eq(feePresets.currency, currency));
+    if (conditions.length > 0) {
+      return await db.select().from(feePresets).where(and(...conditions)).orderBy(feePresets.classGrade, feePresets.feeType);
+    }
+    return await db.select().from(feePresets).orderBy(feePresets.classGrade, feePresets.feeType);
+  }
+
+  async getFeePresetsForClass(classGrade: string, currency: string): Promise<FeePreset[]> {
+    return await db.select().from(feePresets).where(
+      and(eq(feePresets.classGrade, classGrade), eq(feePresets.currency, currency))
+    );
+  }
+
+  async createFeePreset(data: InsertFeePreset): Promise<FeePreset> {
+    const [preset] = await db.insert(feePresets).values(data).returning();
+    return preset;
+  }
+
+  async updateFeePreset(id: number, data: Partial<InsertFeePreset>): Promise<FeePreset> {
+    const [updated] = await db.update(feePresets).set({ ...data, updatedAt: new Date() }).where(eq(feePresets.id, id)).returning();
+    return updated;
+  }
+
+  async deleteFeePreset(id: number): Promise<void> {
+    await db.delete(feePresets).where(eq(feePresets.id, id));
   }
 }
 

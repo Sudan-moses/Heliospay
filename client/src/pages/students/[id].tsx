@@ -164,7 +164,7 @@ export default function StudentProfile() {
                         <Button variant="outline" className="hover-elevate" onClick={() => handlePrint(payment)}>
                           Print Receipt
                         </Button>
-                        <Button variant="outline" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => generatePaymentReceiptPDF(payment, student, branding)}>
+                        <Button variant="outline" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => { generatePaymentReceiptPDF(payment, student, branding).catch(() => {}); }}>
                           <FileDown className="mr-2 h-4 w-4" /> Download PDF
                         </Button>
                       </div>

@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateStudent, useUpdateStudent } from "@/hooks/use-students";
-import { Loader2 } from "lucide-react";
+import { useFeePresets } from "@/hooks/use-fee-presets";
+import { Loader2, Info } from "lucide-react";
 
 const formSchema = insertStudentSchema.extend({
   tuitionFee: z.coerce.number().min(0, "Tuition fee must be positive"),
@@ -28,6 +29,7 @@ export function StudentFormDialog({
 }) {
   const createMutation = useCreateStudent();
   const updateMutation = useUpdateStudent();
+  const { data: feePresets } = useFeePresets();
   const isEditing = !!student;
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -44,6 +46,36 @@ export function StudentFormDialog({
       currency: student?.currency || "UGX",
     },
   });
+
+  const watchedClass = form.watch("classGrade");
+  const watchedCurrency = form.watch("currency");
+  const presetTotal = feePresets
+    ?.filter(p => p.classGrade === watchedClass && p.currency === watchedCurrency)
+    .reduce((sum, p) => sum + p.amount, 0) || 0;
+
+  const handleClassChange = (value: string, onChange: (v: string) => void) => {
+    onChange(value);
+    if (!isEditing) {
+      const currency = form.getValues("currency");
+      const matching = feePresets?.filter(p => p.classGrade === value && p.currency === currency) || [];
+      if (matching.length > 0) {
+        const total = matching.reduce((sum, p) => sum + p.amount, 0);
+        form.setValue("tuitionFee", total);
+      }
+    }
+  };
+
+  const handleCurrencyChange = (value: string, onChange: (v: string) => void) => {
+    onChange(value);
+    if (!isEditing) {
+      const classGrade = form.getValues("classGrade");
+      const matching = feePresets?.filter(p => p.classGrade === classGrade && p.currency === value) || [];
+      if (matching.length > 0) {
+        const total = matching.reduce((sum, p) => sum + p.amount, 0);
+        form.setValue("tuitionFee", total);
+      }
+    }
+  };
 
   const onSubmit = (data: FormValues) => {
     if (isEditing) {
@@ -122,7 +154,7 @@ export function StudentFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Class</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={(v) => handleClassChange(v, field.onChange)} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-11">
                             <SelectValue placeholder="Select class" />
@@ -184,8 +216,14 @@ export function StudentFormDialog({
                     <FormItem>
                       <FormLabel>Expected Tuition Fee</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0.00" className="h-11" {...field} />
+                        <Input type="number" placeholder="0.00" className="h-11" {...field} data-testid="input-tuition-fee" />
                       </FormControl>
+                      {presetTotal > 0 && !isEditing && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Info className="h-3 w-3" />
+                          Auto-populated from fee presets. You can override this value.
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -196,7 +234,7 @@ export function StudentFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Currency</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={(v) => handleCurrencyChange(v, field.onChange)} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-11">
                             <SelectValue placeholder="Select currency" />

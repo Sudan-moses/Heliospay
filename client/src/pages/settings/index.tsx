@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Save, School, Loader2 } from "lucide-react";
+import { Settings, Save, School, Loader2, DollarSign } from "lucide-react";
 import { useEffect, useCallback } from "react";
 import UsersManagement from "./users";
+import FeePresetsManagement from "./fee-presets";
 
 export default function SettingsPage() {
   const { data: branding, isLoading } = useBranding();
@@ -85,6 +86,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="branding" className="w-full">
         <TabsList className="mb-4" data-testid="tabs-settings">
           <TabsTrigger value="branding" data-testid="tab-branding">Branding</TabsTrigger>
+          <TabsTrigger value="fee-structure" data-testid="tab-fee-structure">Fee Structure</TabsTrigger>
           <TabsTrigger value="users" data-testid="tab-users">User Management</TabsTrigger>
         </TabsList>
 
@@ -200,6 +202,10 @@ export default function SettingsPage() {
               </Form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="fee-structure">
+          <FeePresetsManagement />
         </TabsContent>
 
         <TabsContent value="users">

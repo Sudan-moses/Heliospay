@@ -15,8 +15,9 @@ A web-based School Payment Recording System for private primary and secondary sc
 - **Pending User Approval**: New users get "Pending" role by default; must be approved by Admin before accessing the system
 - Student CRUD management with class levels: Senior 1–4
 - Payment recording with multi-fee line items per payment, grouped student dropdown by class
-- Auto-generated receipt numbers, printable receipts, PDF generation (jspdf, client-side)
-- Receipt verification: embedded as tab in Payments page + standalone public route at /verify-receipt
+- Auto-generated receipt numbers, printable receipts, PDF generation (jspdf + QR codes via qrcode library, client-side)
+- Receipt verification: embedded as tab in Payments page + standalone public route at /verify-receipt + QR-scannable route at /verify/receipt/:receiptNumber
+- Fee Structure Management: Admin defines expected fees per class/term/feeType in Settings; auto-populates student tuition on enrollment
 - Master Payment Report: downloadable PDF filtered by term and class
 - Expense recording by category with term association
 - Staff management with two tabs: Teaching Staff and Non-Teaching Staff
@@ -39,6 +40,7 @@ A web-based School Payment Recording System for private primary and secondary sc
 - `sessions` — Replit Auth sessions
 - `students` — Student records
 - `payments` — Payment records with receipt numbers and feeBreakdown JSON
+- `fee_presets` — Fee structure presets per class/term/feeType (amount, currency)
 - `expenses` — Expense records
 - `teachers` — Teaching staff with salary breakdown
 - `non_teaching_staff` — Non-teaching staff with full salary breakdown (accommodation, transport, other allowances, deductions)
@@ -72,6 +74,8 @@ A web-based School Payment Recording System for private primary and secondary sc
 - `client/src/hooks/use-payrolls.ts` — Payroll data hooks
 - `client/src/hooks/use-expenses.ts` — Expense data hooks
 - `client/src/hooks/use-budgets.ts` — Budget CRUD and comparison hooks
+- `client/src/hooks/use-fee-presets.ts` — Fee presets CRUD hooks
+- `client/src/pages/settings/fee-presets.tsx` — Fee Structure management UI (Settings tab)
 - `client/src/pages/reports/index.tsx` — Financial reports page (Weekly/Monthly/Termly)
 - `client/src/pages/budget/index.tsx` — Budget tracking page
 - `client/src/lib/utils.ts` — Utility functions including `formatCurrency()`
@@ -89,3 +93,6 @@ A web-based School Payment Recording System for private primary and secondary sc
 - Net salary = baseSalary + accommodationAllowance + transportAllowance + otherAllowances - deductions
 - Fee types: Tuition Fee, Admission Fee, Uniform Fee, Boarding Fee, Transport Fee, Lab Fee, SSCSE Fee (Senior 4 only)
 - Payments support multiple fee line items stored in feeBreakdown JSON field
+- PDF receipts embed QR codes linking to /verify/receipt/{receiptNumber} for public verification
+- Fee presets define expected fees per class/term/feeType; auto-populate student tuitionFee on enrollment
+- Student form auto-populates tuition fee from presets when class+currency selected (manual override allowed)

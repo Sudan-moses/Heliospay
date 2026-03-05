@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,16 +24,21 @@ interface VerifyResult {
     admissionNumber: string;
     classGrade: string;
   };
+  branding?: {
+    schoolName: string;
+    schoolAddress: string;
+  };
 }
 
 export default function VerifyReceiptPage() {
-  const [receiptNumber, setReceiptNumber] = useState("");
+  const params = useParams<{ receiptNumber?: string }>();
+  const [receiptNumber, setReceiptNumber] = useState(params.receiptNumber ? decodeURIComponent(params.receiptNumber) : "");
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  async function handleVerify() {
-    const trimmed = receiptNumber.trim();
+  const doVerify = useCallback(async (receipt: string) => {
+    const trimmed = receipt.trim();
     if (!trimmed) return;
 
     setIsLoading(true);
@@ -47,16 +53,33 @@ export default function VerifyReceiptPage() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (params.receiptNumber) {
+      const decoded = decodeURIComponent(params.receiptNumber);
+      setReceiptNumber(decoded);
+      doVerify(decoded);
+    }
+  }, [params.receiptNumber, doVerify]);
+
+  async function handleVerify() {
+    doVerify(receiptNumber);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") handleVerify();
   }
 
+  const schoolName = result?.branding?.schoolName;
+
   return (
-    <div className="flex items-center justify-center min-h-[70vh]">
+    <div className="flex items-center justify-center min-h-[70vh] px-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center pb-2">
+          {schoolName && (
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2" data-testid="text-school-name">{schoolName}</p>
+          )}
           <div className="mx-auto mb-3 h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
             <ShieldCheck className="h-6 w-6 text-primary" />
           </div>

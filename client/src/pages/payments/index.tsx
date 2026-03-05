@@ -258,7 +258,7 @@ export default function PaymentsPage() {
                           <Printer className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" title="Download PDF" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => {
-                          generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment), branding);
+                          generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment), branding).catch(() => {});
                         }}>
                           <FileDown className="h-4 w-4" />
                         </Button>

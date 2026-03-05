@@ -119,6 +119,17 @@ export const budgets = pgTable("budgets", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const feePresets = pgTable("fee_presets", {
+  id: serial("id").primaryKey(),
+  classGrade: text("class_grade").notNull(),
+  term: text("term").notNull(),
+  feeType: text("fee_type").notNull(),
+  amount: integer("amount").notNull().default(0),
+  currency: text("currency").notNull().default("UGX"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const studentsRelations = relations(students, ({ many }) => ({
   payments: many(payments),
 }));
@@ -198,6 +209,10 @@ export type InsertNonTeachingStaff = z.infer<typeof insertNonTeachingStaffSchema
 
 export type Budget = typeof budgets.$inferSelect;
 export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+
+export const insertFeePresetSchema = createInsertSchema(feePresets).omit({ id: true, createdAt: true, updatedAt: true });
+export type FeePreset = typeof feePresets.$inferSelect;
+export type InsertFeePreset = z.infer<typeof insertFeePresetSchema>;
 
 export type CreatePaymentRequest = InsertPayment;
 export type PaymentResponse = Payment & { studentName?: string };
