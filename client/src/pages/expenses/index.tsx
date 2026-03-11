@@ -7,11 +7,13 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Trash2, FileDown } from "lucide-react";
+import { Plus, Search, Trash2, FileDown, FileText } from "lucide-react";
 import { ExpenseFormDialog } from "@/components/expense-form-dialog";
 import { generateExpenseReceiptPDF } from "@/lib/pdf-receipts";
+import { generateDetailedExpenseReportPDF } from "@/lib/pdf-reports";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const categoryColors: Record<string, string> = {
   Rent: "bg-blue-50 text-blue-700 border-blue-200",
@@ -32,6 +34,8 @@ export default function ExpensesPage() {
   const deleteMutation = useDeleteExpense();
   const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [reportTerm, setReportTerm] = useState<string>("all");
+  const [reportCurrency, setReportCurrency] = useState<string>("all");
 
   const filteredExpenses = expenses?.filter(
     (e) =>
@@ -41,6 +45,30 @@ export default function ExpensesPage() {
 
   const totalUGX = expenses?.filter((e) => e.currency === "UGX").reduce((sum, e) => sum + e.amount, 0) || 0;
   const totalUSD = expenses?.filter((e) => e.currency === "USD").reduce((sum, e) => sum + e.amount, 0) || 0;
+
+  const handleDetailedReport = () => {
+    if (!expenses || expenses.length === 0) return;
+    let filtered = expenses;
+    if (reportTerm && reportTerm !== "all") filtered = filtered.filter(e => e.term === reportTerm);
+    if (reportCurrency && reportCurrency !== "all") filtered = filtered.filter(e => e.currency === reportCurrency);
+
+    generateDetailedExpenseReportPDF(
+      filtered.map(e => ({
+        expenseDate: e.expenseDate ? String(e.expenseDate) : null,
+        category: e.category,
+        description: e.description,
+        recordedBy: e.recordedBy,
+        amount: e.amount,
+        currency: e.currency,
+        term: e.term,
+      })),
+      {
+        term: reportTerm !== "all" ? reportTerm : undefined,
+        currency: reportCurrency !== "all" ? reportCurrency : undefined,
+      },
+      branding
+    );
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -65,6 +93,42 @@ export default function ExpensesPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Expenses (USD)</p>
           <p className="text-2xl font-display font-bold text-red-500 mt-2" data-testid="text-total-usd">{formatCurrency(totalUSD, "USD")}</p>
         </Card>
+      </div>
+
+      {/* Report export controls */}
+      <div className="flex flex-wrap items-center gap-3" data-testid="expense-report-controls">
+        <Select value={reportTerm} onValueChange={setReportTerm}>
+          <SelectTrigger className="w-[140px] h-9 rounded-xl" data-testid="select-expense-report-term">
+            <SelectValue placeholder="All Terms" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Terms</SelectItem>
+            <SelectItem value="Term 1">Term 1</SelectItem>
+            <SelectItem value="Term 2">Term 2</SelectItem>
+            <SelectItem value="Term 3">Term 3</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={reportCurrency} onValueChange={setReportCurrency}>
+          <SelectTrigger className="w-[140px] h-9 rounded-xl" data-testid="select-expense-report-currency">
+            <SelectValue placeholder="All Currencies" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Currencies</SelectItem>
+            <SelectItem value="UGX">UGX</SelectItem>
+            <SelectItem value="USD">USD</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDetailedReport}
+          disabled={!expenses?.length}
+          className="rounded-xl"
+          data-testid="button-detailed-expense-report"
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          Detailed Report PDF
+        </Button>
       </div>
 
       <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
@@ -127,7 +191,7 @@ export default function ExpensesPage() {
                       size="icon"
                       className="rounded-xl h-8 w-8"
                       onClick={() => generateExpenseReceiptPDF(expense, branding)}
-                      title="Download PDF"
+                      title="Download Voucher PDF"
                       data-testid={`button-pdf-expense-${expense.id}`}
                     >
                       <FileDown className="h-4 w-4" />

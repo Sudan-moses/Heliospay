@@ -14,7 +14,7 @@ import { useStudents } from "@/hooks/use-students";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Plus, X } from "lucide-react";
 
-const BASE_FEE_TYPES = ["Tuition Fee", "Admission Fee", "Uniform Fee", "Boarding Fee", "Transport Fee", "Lab Fee"];
+const BASE_FEE_TYPES = ["Tuition Fee", "Admission Fee", "Boarding Fee", "Transport Fee", "Lab Fee"];
 const TERMS = ["Term 1", "Term 2", "Term 3"];
 const CLASS_GRADES = ["Senior 1", "Senior 2", "Senior 3", "Senior 4"];
 

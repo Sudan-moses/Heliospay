@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, Loader2, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { Budget } from "@shared/schema";
+import { useBranding } from "@/hooks/use-branding";
+import { generateDetailedBudgetReportPDF } from "@/lib/pdf-reports";
 
 const EXPENSE_CATEGORIES = ["Rent", "Maintenance", "Security", "Salaries", "Utilities", "Supplies", "Transport", "Other"];
 const TERMS = ["Term 1", "Term 2", "Term 3"];
@@ -37,6 +39,7 @@ function getStatusBadge(status: string) {
 
 export default function BudgetPage() {
   const { user } = useAuth();
+  const { data: branding } = useBranding();
   const canEdit = (user as any)?.role !== "Principal";
 
   const [term, setTerm] = useState("Term 1");
@@ -203,6 +206,30 @@ export default function BudgetPage() {
         </TabsContent>
 
         <TabsContent value="comparison" className="space-y-6">
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl"
+              disabled={!comparison?.length}
+              onClick={() => comparison && generateDetailedBudgetReportPDF(
+                comparison.map(r => ({
+                  category: r.category,
+                  estimated: r.estimated,
+                  actual: r.actual,
+                  variance: r.variance,
+                  status: r.status,
+                  currency: r.currency,
+                })),
+                { term, academicYear },
+                branding
+              )}
+              data-testid="button-budget-report-pdf"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Budget Report PDF
+            </Button>
+          </div>
           <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
             <Table>
               <TableHeader className="bg-muted/30">
