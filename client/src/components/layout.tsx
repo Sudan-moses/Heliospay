@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet, ShieldCheck, Settings, BarChart3, PiggyBank } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, GraduationCap, Receipt, UserCheck, Wallet, ShieldCheck, Settings, BarChart3, PiggyBank, Landmark } from "lucide-react";
 import { Button } from "./ui/button";
 
 type UserRole = "Admin" | "Bursar" | "Principal" | "Suspended" | "Pending";
@@ -28,6 +28,7 @@ const menuItems = [
   { title: "Payroll", url: "/payroll", icon: Wallet, roles: ["Admin", "Bursar"] as UserRole[] },
   { title: "Reports", url: "/reports", icon: BarChart3, roles: ["Admin", "Bursar"] as UserRole[] },
   { title: "Budget", url: "/budget", icon: PiggyBank, roles: ["Admin", "Bursar"] as UserRole[] },
+  { title: "Shareholders", url: "/shareholders", icon: Landmark, roles: ["Admin"] as UserRole[] },
 ];
 
 function AppSidebar() {

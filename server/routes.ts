@@ -366,7 +366,7 @@ export async function registerRoutes(
 
   app.get('/api/staff/:type/:id/payroll-history', isAuthenticated, blockInactive, async (req, res) => {
     const { type, id } = req.params;
-    const items = await storage.getPayrollItemsForStaff(type, Number(id));
+    const items = await storage.getPayrollItemsForStaff(type as string, Number(id));
     res.json(items);
   });
 
@@ -381,7 +381,7 @@ export async function registerRoutes(
     if (!["Admin", "Bursar", "Principal", "Suspended", "Pending"].includes(role)) {
       return res.status(400).json({ message: "Invalid role" });
     }
-    const user = await authStorage.updateUserRole(req.params.id, role);
+    const user = await authStorage.updateUserRole(req.params.id as string, role);
     res.json(user);
   });
 
@@ -534,6 +534,125 @@ export async function registerRoutes(
     });
 
     res.json(comparison);
+  });
+
+  // Shareholder routes (Admin only)
+  app.get('/api/shareholders', isAuthenticated, blockInactive, async (req, res) => {
+    try {
+      const list = await storage.getShareholders();
+      res.json(list);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch shareholders" });
+    }
+  });
+
+  app.post('/api/shareholders', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { insertShareholderSchema } = await import("@shared/schema");
+      const data = insertShareholderSchema.parse(req.body);
+      // Validate total percentage won't exceed 100
+      const existing = await storage.getShareholders();
+      const totalExisting = existing.reduce((sum, s) => sum + parseFloat(s.sharePercentage), 0);
+      if (totalExisting + parseFloat(data.sharePercentage) > 100) {
+        return res.status(400).json({ message: `Total share percentage would exceed 100%. Current total: ${totalExisting.toFixed(2)}%` });
+      }
+      const s = await storage.createShareholder(data);
+      res.status(201).json(s);
+    } catch (e: any) {
+      if (e?.name === "ZodError") return res.status(400).json({ message: e.errors[0]?.message || "Validation error" });
+      res.status(500).json({ message: e?.message || "Failed to create shareholder" });
+    }
+  });
+
+  app.put('/api/shareholders/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { insertShareholderSchema } = await import("@shared/schema");
+      const data = insertShareholderSchema.partial().parse(req.body);
+      // Validate total percentage won't exceed 100 (excluding this shareholder)
+      const existing = await storage.getShareholders();
+      const totalExcludingThis = existing.filter(s => s.id !== id).reduce((sum, s) => sum + parseFloat(s.sharePercentage), 0);
+      const newPct = data.sharePercentage ? parseFloat(data.sharePercentage) : 0;
+      if (totalExcludingThis + newPct > 100) {
+        return res.status(400).json({ message: `Total share percentage would exceed 100%. Other shareholders total: ${totalExcludingThis.toFixed(2)}%` });
+      }
+      const s = await storage.updateShareholder(id, data);
+      res.json(s);
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed to update shareholder" });
+    }
+  });
+
+  app.delete('/api/shareholders/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteShareholder(Number(req.params.id));
+      res.status(204).end();
+    } catch (e) {
+      res.status(500).json({ message: "Failed to delete shareholder" });
+    }
+  });
+
+  // Payout routes
+  app.get('/api/payouts', isAuthenticated, blockInactive, async (req, res) => {
+    try {
+      const term = req.query.term as string || "Term 1";
+      const academicYear = req.query.academicYear as string || "2023/2024";
+      const currency = req.query.currency as string || "UGX";
+      const list = await storage.getPayouts(term, academicYear, currency);
+      res.json(list);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch payouts" });
+    }
+  });
+
+  app.post('/api/payouts/calculate', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { term, academicYear, currency } = req.body;
+      if (!term || !academicYear || !currency) {
+        return res.status(400).json({ message: "term, academicYear, and currency are required" });
+      }
+
+      // Get financial summary for the term
+      const [startYear] = academicYear.split("/").map(Number);
+      const yearStart = new Date(startYear || new Date().getFullYear(), 0, 1);
+      const yearEnd = new Date((startYear || new Date().getFullYear()) + 1, 11, 31);
+      const financials = await storage.getFinancialSummary(yearStart, yearEnd, term);
+
+      const netProfit = (financials.netBalance as any)[currency] || 0;
+
+      const shareholdersList = await storage.getShareholders();
+      if (shareholdersList.length === 0) {
+        return res.status(400).json({ message: "No shareholders registered. Add shareholders first." });
+      }
+
+      // Delete existing payouts for this period
+      await storage.deletePayoutsForTermYear(term, academicYear, currency);
+
+      // Calculate and save payouts
+      const payoutData = shareholdersList.map(sh => ({
+        shareholderId: sh.id,
+        term,
+        academicYear,
+        netProfit: Math.max(0, netProfit),
+        payoutAmount: netProfit > 0 ? Math.round((parseFloat(sh.sharePercentage) / 100) * netProfit) : 0,
+        currency,
+      }));
+
+      await storage.savePayouts(payoutData);
+      const savedPayouts = await storage.getPayouts(term, academicYear, currency);
+
+      res.json({
+        netProfit,
+        currency,
+        term,
+        academicYear,
+        payouts: savedPayouts,
+        totalAllocated: savedPayouts.reduce((s, p) => s + p.payoutAmount, 0),
+        retainedEarnings: Math.max(0, netProfit - savedPayouts.reduce((s, p) => s + p.payoutAmount, 0)),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed to calculate payouts" });
+    }
   });
 
   // Seed initial data asynchronously after starting

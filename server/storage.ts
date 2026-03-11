@@ -10,6 +10,8 @@ import {
   nonTeachingStaff,
   budgets,
   feePresets,
+  shareholders,
+  payouts,
   type Student,
   type InsertStudent,
   type Payment,
@@ -31,6 +33,11 @@ import {
   type InsertBudget,
   type FeePreset,
   type InsertFeePreset,
+  type Shareholder,
+  type InsertShareholder,
+  type Payout,
+  type InsertPayout,
+  type PayoutWithShareholder,
 } from "@shared/schema";
 import { eq, desc, ilike, or, sum, and, gte, lte, sql } from "drizzle-orm";
 
@@ -94,6 +101,15 @@ export interface IStorage {
     expensesByCategory: { category: string; amount: number; currency: string }[];
     incomeByFeeType: { feeType: string; amount: number; currency: string }[];
   }>;
+
+  getShareholders(): Promise<Shareholder[]>;
+  getShareholder(id: number): Promise<Shareholder | undefined>;
+  createShareholder(data: InsertShareholder): Promise<Shareholder>;
+  updateShareholder(id: number, data: Partial<InsertShareholder>): Promise<Shareholder>;
+  deleteShareholder(id: number): Promise<void>;
+  getPayouts(term: string, academicYear: string, currency: string): Promise<PayoutWithShareholder[]>;
+  savePayouts(payoutData: InsertPayout[]): Promise<Payout[]>;
+  deletePayoutsForTermYear(term: string, academicYear: string, currency: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -521,6 +537,60 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFeePreset(id: number): Promise<void> {
     await db.delete(feePresets).where(eq(feePresets.id, id));
+  }
+
+  async getShareholders(): Promise<Shareholder[]> {
+    return await db.select().from(shareholders).orderBy(shareholders.createdAt);
+  }
+
+  async getShareholder(id: number): Promise<Shareholder | undefined> {
+    const [s] = await db.select().from(shareholders).where(eq(shareholders.id, id));
+    return s;
+  }
+
+  async createShareholder(data: InsertShareholder): Promise<Shareholder> {
+    const [s] = await db.insert(shareholders).values(data).returning();
+    return s;
+  }
+
+  async updateShareholder(id: number, data: Partial<InsertShareholder>): Promise<Shareholder> {
+    const [s] = await db.update(shareholders).set(data).where(eq(shareholders.id, id)).returning();
+    return s;
+  }
+
+  async deleteShareholder(id: number): Promise<void> {
+    await db.delete(shareholders).where(eq(shareholders.id, id));
+  }
+
+  async getPayouts(term: string, academicYear: string, currency: string): Promise<PayoutWithShareholder[]> {
+    const allPayouts = await db.select().from(payouts)
+      .where(and(eq(payouts.term, term), eq(payouts.academicYear, academicYear), eq(payouts.currency, currency)))
+      .orderBy(desc(payouts.createdAt));
+
+    if (allPayouts.length === 0) return [];
+
+    const allShareholders = await db.select().from(shareholders);
+    const shareholderMap = new Map(allShareholders.map(s => [s.id, s]));
+
+    return allPayouts.map(p => {
+      const sh = shareholderMap.get(p.shareholderId);
+      return {
+        ...p,
+        shareholderName: sh?.name || "Unknown",
+        sharePercentage: sh?.sharePercentage || "0",
+      };
+    });
+  }
+
+  async savePayouts(payoutData: InsertPayout[]): Promise<Payout[]> {
+    if (payoutData.length === 0) return [];
+    return await db.insert(payouts).values(payoutData).returning();
+  }
+
+  async deletePayoutsForTermYear(term: string, academicYear: string, currency: string): Promise<void> {
+    await db.delete(payouts).where(
+      and(eq(payouts.term, term), eq(payouts.academicYear, academicYear), eq(payouts.currency, currency))
+    );
   }
 }
 

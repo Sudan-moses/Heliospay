@@ -18,6 +18,7 @@ import PayrollPage from "@/pages/payroll";
 import ReportsPage from "@/pages/reports";
 import SettingsPage from "@/pages/settings";
 import BudgetPage from "@/pages/budget";
+import ShareholdersPage from "@/pages/shareholders";
 import VerifyReceiptPage from "@/pages/verify-receipt";
 import { Layout } from "@/components/layout";
 import { Loader2 } from "lucide-react";
@@ -36,6 +37,7 @@ function ProtectedRoutes() {
         <Route path="/payroll" component={PayrollPage}/>
         <Route path="/reports" component={ReportsPage}/>
         <Route path="/budget" component={BudgetPage}/>
+        <Route path="/shareholders" component={ShareholdersPage}/>
         <Route path="/verify-receipt" component={VerifyReceiptPage}/>
         <Route path="/settings" component={SettingsPage}/>
         <Route component={NotFound} />

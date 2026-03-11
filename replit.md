@@ -11,7 +11,8 @@ A web-based School Payment Recording System for private primary and secondary sc
 
 ## Key Features
 
-- **RBAC**: Admin (full access), Bursar (Students, Payments, Expenses, Staff, Payroll, Reports, Budget), Principal (view-only: Dashboard, Students, Payments, Staff), Pending (blocked until admin approves), Suspended (blocked)
+- **RBAC**: Admin (full access including Shareholders), Bursar (Students, Payments, Expenses, Staff, Payroll, Reports, Budget), Principal (view-only: Dashboard, Students, Payments, Staff), Pending (blocked until admin approves), Suspended (blocked)
+- **Shareholder Management** (Admin only): Register shareholders with ownership percentages; calculate and record dividend distributions per term/year/currency; donut ownership chart; Dividend Report PDF; Retained Earnings tracking; Settings → Shareholders tab for registry management
 - **Pending User Approval**: New users get "Pending" role by default; must be approved by Admin before accessing the system
 - Student CRUD management with class levels: Senior 1–4
 - Payment recording with multi-fee line items per payment, grouped student dropdown by class
@@ -48,6 +49,8 @@ A web-based School Payment Recording System for private primary and secondary sc
 - `payroll_items` — Individual payroll line items (supports both teacherId and nonTeachingStaffId, staffType field)
 - `branding_settings` — School name, address, logo (single row)
 - `budgets` — Term budget items by category (term, academicYear, category, estimatedAmount, currency)
+- `shareholders` — Shareholder registry (name, contactInfo, sharePercentage as numeric)
+- `payouts` — Calculated dividend payouts per term/academicYear/currency linked to shareholders
 
 ## Important Files
 

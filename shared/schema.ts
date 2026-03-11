@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, numeric } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -130,6 +130,36 @@ export const feePresets = pgTable("fee_presets", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const shareholders = pgTable("shareholders", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  contactInfo: text("contact_info").notNull().default(""),
+  sharePercentage: numeric("share_percentage", { precision: 5, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const payouts = pgTable("payouts", {
+  id: serial("id").primaryKey(),
+  shareholderId: integer("shareholder_id").notNull().references(() => shareholders.id, { onDelete: "cascade" }),
+  term: text("term").notNull(),
+  academicYear: text("academic_year").notNull(),
+  netProfit: integer("net_profit").notNull(),
+  payoutAmount: integer("payout_amount").notNull(),
+  currency: text("currency").notNull().default("UGX"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const shareholdersRelations = relations(shareholders, ({ many }) => ({
+  payouts: many(payouts),
+}));
+
+export const payoutsRelations = relations(payouts, ({ one }) => ({
+  shareholder: one(shareholders, {
+    fields: [payouts.shareholderId],
+    references: [shareholders.id],
+  }),
+}));
+
 export const studentsRelations = relations(students, ({ many }) => ({
   payments: many(payments),
 }));
@@ -216,3 +246,16 @@ export type InsertFeePreset = z.infer<typeof insertFeePresetSchema>;
 
 export type CreatePaymentRequest = InsertPayment;
 export type PaymentResponse = Payment & { studentName?: string };
+
+export const insertShareholderSchema = createInsertSchema(shareholders).omit({ id: true, createdAt: true }).extend({
+  sharePercentage: z.string().refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) > 0 && parseFloat(v) <= 100, {
+    message: "Share percentage must be between 0.01 and 100",
+  }),
+});
+export type Shareholder = typeof shareholders.$inferSelect;
+export type InsertShareholder = z.infer<typeof insertShareholderSchema>;
+
+export const insertPayoutSchema = createInsertSchema(payouts).omit({ id: true, createdAt: true });
+export type Payout = typeof payouts.$inferSelect;
+export type InsertPayout = z.infer<typeof insertPayoutSchema>;
+export type PayoutWithShareholder = Payout & { shareholderName: string; sharePercentage: string };

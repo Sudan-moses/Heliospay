@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Save, School, Loader2, DollarSign } from "lucide-react";
+import { Settings, Save, School, Loader2, Users2 } from "lucide-react";
 import { useEffect, useCallback } from "react";
 import UsersManagement from "./users";
 import FeePresetsManagement from "./fee-presets";
+import ShareholdersManagement from "./shareholders";
 
 export default function SettingsPage() {
   const { data: branding, isLoading } = useBranding();
@@ -84,10 +85,11 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="branding" className="w-full">
-        <TabsList className="mb-4" data-testid="tabs-settings">
-          <TabsTrigger value="branding" data-testid="tab-branding">Branding</TabsTrigger>
-          <TabsTrigger value="fee-structure" data-testid="tab-fee-structure">Fee Structure</TabsTrigger>
-          <TabsTrigger value="users" data-testid="tab-users">User Management</TabsTrigger>
+        <TabsList className="mb-4 rounded-xl bg-muted/60 p-1" data-testid="tabs-settings">
+          <TabsTrigger value="branding" className="rounded-lg" data-testid="tab-branding">Branding</TabsTrigger>
+          <TabsTrigger value="fee-structure" className="rounded-lg" data-testid="tab-fee-structure">Fee Structure</TabsTrigger>
+          <TabsTrigger value="shareholders" className="rounded-lg" data-testid="tab-shareholders">Shareholders</TabsTrigger>
+          <TabsTrigger value="users" className="rounded-lg" data-testid="tab-users">User Management</TabsTrigger>
         </TabsList>
 
         <TabsContent value="branding">
@@ -206,6 +208,10 @@ export default function SettingsPage() {
 
         <TabsContent value="fee-structure">
           <FeePresetsManagement />
+        </TabsContent>
+
+        <TabsContent value="shareholders">
+          <ShareholdersManagement />
         </TabsContent>
 
         <TabsContent value="users">

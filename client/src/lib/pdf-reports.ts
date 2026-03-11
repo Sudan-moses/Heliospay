@@ -445,3 +445,116 @@ export function generatePayslipPDF(data: PayslipData, branding?: BrandingParam):
   addFooter(doc, branding);
   doc.save(`payslip-${data.staffName.replace(/\s+/g, "-")}-${data.month}-${new Date().toISOString().split("T")[0]}.pdf`);
 }
+
+export interface DividendReportData {
+  netProfit: number;
+  currency: string;
+  term: string;
+  academicYear: string;
+  payouts: { shareholderName: string; sharePercentage: string; payoutAmount: number }[];
+  totalAllocated: number;
+  retainedEarnings: number;
+}
+
+export function generateDividendReportPDF(data: DividendReportData, branding?: BrandingParam): void {
+  const doc = new jsPDF();
+  let y = addHeader(doc, branding);
+
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(27, 67, 50);
+  doc.text("Dividend Distribution Report", 105, y, { align: "center" });
+  y += 8;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text(`${data.term} · Academic Year ${data.academicYear} · ${data.currency}`, 105, y, { align: "center" });
+  y += 4;
+  doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 105, y, { align: "center" });
+  y += 10;
+
+  y = addLine(doc, y);
+
+  doc.setFillColor(216, 243, 220);
+  doc.roundedRect(20, y, 170, 28, 4, 4, "F");
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(27, 67, 50);
+  doc.text("Net Profit (Total Revenue - Total Expenses)", 105, y + 8, { align: "center" });
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatCurrencyPlain(data.netProfit, data.currency), 105, y + 20, { align: "center" });
+  y += 36;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(27, 67, 50);
+  doc.text("Shareholder Payouts", 20, y);
+  y += 8;
+
+  const tableHeaderY = y;
+  doc.setFillColor(27, 67, 50);
+  doc.rect(20, tableHeaderY, 170, 8, "F");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("Shareholder", 25, tableHeaderY + 5.5);
+  doc.text("Share %", 110, tableHeaderY + 5.5, { align: "right" });
+  doc.text("Dividend Amount", 186, tableHeaderY + 5.5, { align: "right" });
+  y += 12;
+
+  data.payouts.forEach((payout, idx) => {
+    if (idx % 2 === 0) {
+      doc.setFillColor(245, 250, 247);
+      doc.rect(20, y - 4, 170, 10, "F");
+    }
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    doc.text(payout.shareholderName, 25, y + 2);
+    doc.text(`${parseFloat(payout.sharePercentage).toFixed(2)}%`, 110, y + 2, { align: "right" });
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(27, 67, 50);
+    doc.text(formatCurrencyPlain(payout.payoutAmount, data.currency), 186, y + 2, { align: "right" });
+    y += 10;
+  });
+
+  y = addLine(doc, y);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text("Total Allocated:", 25, y);
+  doc.setTextColor(27, 67, 50);
+  doc.text(formatCurrencyPlain(data.totalAllocated, data.currency), 186, y, { align: "right" });
+  y += 10;
+
+  if (data.retainedEarnings > 0) {
+    doc.setFillColor(255, 249, 231);
+    doc.roundedRect(20, y, 170, 18, 3, 3, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Retained Earnings (Unallocated profit)", 25, y + 6);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(180, 120, 0);
+    doc.text(formatCurrencyPlain(data.retainedEarnings, data.currency), 186, y + 12, { align: "right" });
+    y += 26;
+  }
+
+  y += 4;
+  doc.setFillColor(27, 67, 50);
+  doc.roundedRect(20, y, 170, 18, 3, 3, "F");
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(255, 255, 255);
+  doc.text("Net Profit", 25, y + 6);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(formatCurrencyPlain(data.netProfit, data.currency), 186, y + 12, { align: "right" });
+
+  addFooter(doc, branding);
+  doc.save(`dividend-report-${data.term.replace(/\s/g, "-")}-${data.academicYear.replace("/", "-")}-${new Date().toISOString().split("T")[0]}.pdf`);
+}
