@@ -1,109 +1,245 @@
 import jsPDF from "jspdf";
 import type { BrandingParam } from "./pdf-receipts";
 
-// Primary Green: #1B4332 | Secondary Green: #2D6A4F
+// Brand colours — Forest Green
 const PRIMARY_GREEN = [27, 67, 50] as const;
-const SECONDARY_GREEN = [45, 106, 79] as const;
 const PALE_MINT = [216, 243, 220] as const;
 
-function formatCurrencyPlain(amount: number, currency: string = "UGX"): string {
-  const locale = currency === "USD" ? "en-US" : "en-UG";
-  const formatter = new Intl.NumberFormat(locale, {
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+function fmt(amount: number, currency = "UGX"): string {
+  return new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-UG", {
     style: "currency",
     currency,
     minimumFractionDigits: currency === "USD" ? 2 : 0,
     maximumFractionDigits: currency === "USD" ? 2 : 0,
-  });
-  return formatter.format(amount);
+  }).format(amount);
 }
 
-function addHeader(doc: jsPDF, branding?: BrandingParam): number {
+/**
+ * Three-column header — identical design as pdf-receipts.ts
+ * Left: Logo | Centre: School Name + Address | Right: Document title + date
+ */
+function addHeader(
+  doc: jsPDF,
+  documentTitle: string,
+  documentSub: string,
+  branding?: BrandingParam
+): number {
   const schoolName = branding?.schoolName || "HelioPay System";
   const schoolAddress = branding?.schoolAddress || "";
   const logoUrl = branding?.logoUrl;
-  const hasLogo = logoUrl && logoUrl.startsWith("data:");
-  const headerHeight = schoolAddress ? 48 : 42;
+  const hasLogo = typeof logoUrl === "string" && logoUrl.startsWith("data:");
+  const dateStr = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const PAGE_W = 210;
+  const MARGIN = 10;
+  const LOGO_SIZE = 25;
+  const LOGO_X = MARGIN;
+  const LOGO_COL_W = hasLogo ? LOGO_SIZE + 6 : 0;
+  const RIGHT_COL_W = 44;
+  const RIGHT_X = PAGE_W - MARGIN - RIGHT_COL_W;
+  const CENTER_X = MARGIN + LOGO_COL_W;
+  const CENTER_W = RIGHT_X - CENTER_X - 4;
+
+  const nameFontPt = schoolName.length > 30 ? Math.round(18 * 0.85) : 18;
+  const nameFontMm = nameFontPt * 0.352778;
+  const nameLines = doc.splitTextToSize(schoolName, CENTER_W);
+  const addrLines = schoolAddress
+    ? doc.splitTextToSize(schoolAddress, CENTER_W)
+    : [];
+  const centerBlockH =
+    nameLines.length * nameFontMm +
+    (addrLines.length ? addrLines.length * 4 + 3 : 0);
+  const HEADER_H = Math.max(LOGO_SIZE + 10, centerBlockH + 16, 44);
 
   doc.setFillColor(...PRIMARY_GREEN);
-  doc.rect(0, 0, 210, headerHeight, "F");
+  doc.rect(0, 0, PAGE_W, HEADER_H, "F");
 
   if (hasLogo) {
+    const logoY = (HEADER_H - LOGO_SIZE) / 2;
     try {
-      const logoSize = 28;
-      const logoX = 12;
-      const logoY = (headerHeight - logoSize) / 2;
-      doc.addImage(logoUrl, "PNG", logoX, logoY, logoSize, logoSize);
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.setFont("helvetica", "bold");
-      doc.text(schoolName, 50, schoolAddress ? 16 : 20);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      if (schoolAddress) {
-        doc.text(schoolAddress, 50, 25);
-        doc.text("Financial Report", 50, 34);
-      } else {
-        doc.text("Financial Report", 50, 28);
-      }
-    } catch {
-      _renderTextHeader(doc, schoolName, schoolAddress, headerHeight, "Financial Report");
-    }
-  } else {
-    _renderTextHeader(doc, schoolName, schoolAddress, headerHeight, "Financial Report");
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(LOGO_X - 1, logoY - 1, LOGO_SIZE + 2, LOGO_SIZE + 2, 2, 2, "F");
+      doc.addImage(logoUrl as string, "PNG", LOGO_X, logoY, LOGO_SIZE, LOGO_SIZE);
+    } catch {}
   }
+
+  const centerCX = CENTER_X + CENTER_W / 2;
+  let textY = (HEADER_H - centerBlockH) / 2 + nameFontMm;
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(nameFontPt);
+  doc.text(nameLines, centerCX, textY, { align: "center" });
+  textY += nameLines.length * nameFontMm + 2;
+
+  if (addrLines.length) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(addrLines, centerCX, textY, { align: "center" });
+  }
+
+  const RIGHT_EDGE = PAGE_W - MARGIN;
+  const rightMidY = HEADER_H / 2;
+  const titleLines = doc.splitTextToSize(documentTitle, RIGHT_COL_W);
+  const titleBlockH = titleLines.length * 4.5;
+  const titleStartY = rightMidY - titleBlockH / 2 - (documentSub ? 3 : 0);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text(titleLines, RIGHT_EDGE, titleStartY, { align: "right" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(200, 230, 215);
+  doc.text(dateStr, RIGHT_EDGE, titleStartY + titleBlockH + 3, { align: "right" });
+
+  if (documentSub) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7);
+    doc.text(documentSub, RIGHT_EDGE, titleStartY + titleBlockH + 9, { align: "right" });
+  }
+
+  doc.setDrawColor(...PRIMARY_GREEN);
+  doc.setLineWidth(0.8);
+  doc.line(0, HEADER_H, PAGE_W, HEADER_H);
 
   doc.setTextColor(0, 0, 0);
-  return headerHeight + 10;
+  return HEADER_H + 10;
 }
 
-function _renderTextHeader(doc: jsPDF, schoolName: string, schoolAddress: string, headerHeight: number, subtitle: string): void {
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text(schoolName, 105, schoolAddress ? 17 : 19, { align: "center" });
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  if (schoolAddress) {
-    doc.text(schoolAddress, 105, 27, { align: "center" });
-    doc.text(subtitle, 105, 35, { align: "center" });
-  } else {
-    doc.text(subtitle, 105, 28, { align: "center" });
+function addHeaderLandscape(
+  doc: jsPDF,
+  documentTitle: string,
+  documentSub: string,
+  branding?: BrandingParam
+): number {
+  const schoolName = branding?.schoolName || "HelioPay System";
+  const schoolAddress = branding?.schoolAddress || "";
+  const logoUrl = branding?.logoUrl;
+  const hasLogo = typeof logoUrl === "string" && logoUrl.startsWith("data:");
+  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  const PAGE_W = 297; // landscape A4
+  const MARGIN = 10;
+  const LOGO_SIZE = 22;
+  const LOGO_COL_W = hasLogo ? LOGO_SIZE + 6 : 0;
+  const RIGHT_COL_W = 50;
+  const RIGHT_X = PAGE_W - MARGIN - RIGHT_COL_W;
+  const CENTER_X = MARGIN + LOGO_COL_W;
+  const CENTER_W = RIGHT_X - CENTER_X - 4;
+
+  const nameFontPt = schoolName.length > 30 ? Math.round(18 * 0.85) : 18;
+  const nameFontMm = nameFontPt * 0.352778;
+  const nameLines = doc.splitTextToSize(schoolName, CENTER_W);
+  const addrLines = schoolAddress ? doc.splitTextToSize(schoolAddress, CENTER_W) : [];
+  const centerBlockH = nameLines.length * nameFontMm + (addrLines.length ? addrLines.length * 4 + 3 : 0);
+  const HEADER_H = Math.max(LOGO_SIZE + 10, centerBlockH + 16, 40);
+
+  doc.setFillColor(...PRIMARY_GREEN);
+  doc.rect(0, 0, PAGE_W, HEADER_H, "F");
+
+  if (hasLogo) {
+    const logoY = (HEADER_H - LOGO_SIZE) / 2;
+    try {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(MARGIN - 1, logoY - 1, LOGO_SIZE + 2, LOGO_SIZE + 2, 2, 2, "F");
+      doc.addImage(logoUrl as string, "PNG", MARGIN, logoY, LOGO_SIZE, LOGO_SIZE);
+    } catch {}
   }
+
+  const centerCX = CENTER_X + CENTER_W / 2;
+  let textY = (HEADER_H - centerBlockH) / 2 + nameFontMm;
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(nameFontPt);
+  doc.text(nameLines, centerCX, textY, { align: "center" });
+  textY += nameLines.length * nameFontMm + 2;
+  if (addrLines.length) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(addrLines, centerCX, textY, { align: "center" });
+  }
+
+  const RIGHT_EDGE = PAGE_W - MARGIN;
+  const titleLines = doc.splitTextToSize(documentTitle, RIGHT_COL_W);
+  const titleBlockH = titleLines.length * 4.5;
+  const titleStartY = HEADER_H / 2 - titleBlockH / 2 - (documentSub ? 3 : 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text(titleLines, RIGHT_EDGE, titleStartY, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(200, 230, 215);
+  doc.text(dateStr, RIGHT_EDGE, titleStartY + titleBlockH + 3, { align: "right" });
+  if (documentSub) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7);
+    doc.text(documentSub, RIGHT_EDGE, titleStartY + titleBlockH + 9, { align: "right" });
+  }
+
+  doc.setDrawColor(...PRIMARY_GREEN);
+  doc.setLineWidth(0.8);
+  doc.line(0, HEADER_H, PAGE_W, HEADER_H);
+  doc.setTextColor(0, 0, 0);
+  return HEADER_H + 10;
 }
 
-function addLine(doc: jsPDF, y: number): number {
-  doc.setDrawColor(200, 200, 200);
+function divider(doc: jsPDF, y: number, x1 = 15, x2 = 195): number {
+  doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.3);
-  doc.line(20, y, 190, y);
+  doc.line(x1, y, x2, y);
   return y + 6;
 }
 
-function addTableHeader(doc: jsPDF, y: number, cols: { label: string; x: number; align?: "right" | "center" }[]): number {
+function sectionTitle(doc: jsPDF, text: string, y: number): number {
+  doc.setFontSize(10.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PRIMARY_GREEN);
+  doc.text(text, 18, y);
+  return y + 2;
+}
+
+function tableHeader(
+  doc: jsPDF,
+  y: number,
+  cols: Array<{ label: string; x: number; align?: "right" | "center" }>,
+  pageW = 210
+): number {
   doc.setFillColor(...PRIMARY_GREEN);
-  doc.rect(20, y, 170, 9, "F");
+  doc.rect(15, y, pageW - 30, 9, "F");
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  cols.forEach(c => {
-    if (c.align === "right") {
-      doc.text(c.label, c.x, y + 6, { align: "right" });
-    } else {
-      doc.text(c.label, c.x, y + 6);
-    }
+  cols.forEach((c) => {
+    if (c.align === "right") doc.text(c.label, c.x, y + 6, { align: "right" });
+    else doc.text(c.label, c.x, y + 6);
   });
   return y + 13;
 }
 
 function addFooter(doc: jsPDF, branding?: BrandingParam): void {
-  const schoolName = branding?.schoolName || "HelioPay System";
-  const pageHeight = doc.internal.pageSize.getHeight();
+  const name = branding?.schoolName || "HelioPay System";
+  const PH = doc.internal.pageSize.getHeight();
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(160, 160, 160);
-  doc.text(`Generated by ${schoolName} on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 105, pageHeight - 8, { align: "center" });
+  doc.setTextColor(180, 180, 180);
+  doc.text(
+    `Generated by ${name} · ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`,
+    doc.internal.pageSize.getWidth() / 2,
+    PH - 6,
+    { align: "center" }
+  );
 }
 
-// ─── Financial Summary Report ───────────────────────────────────────────────
+// ─── Financial Summary Report ─────────────────────────────────────────────────
 
 export interface FinancialSummary {
   totalIncome: { UGX: number; USD: number };
@@ -116,137 +252,100 @@ export interface FinancialSummary {
   endDate: string;
 }
 
-export function generateFinancialReportPDF(data: FinancialSummary, branding?: BrandingParam): void {
+export function generateFinancialReportPDF(
+  data: FinancialSummary,
+  branding?: BrandingParam
+): void {
   const doc = new jsPDF();
-  let y = addHeader(doc, branding);
+  const periodLabel =
+    data.period === "weekly" ? "Weekly" : data.period === "monthly" ? "Monthly" : "Termly";
+  const start = new Date(data.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const end = new Date(data.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  let y = addHeader(doc, `${periodLabel} Financial Report`, `${start} – ${end}`, branding);
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(0, 0, 0);
-  const periodLabel = data.period === "weekly" ? "Weekly" : data.period === "monthly" ? "Monthly" : "Termly";
-  doc.text(`${periodLabel} Financial Report`, 105, y, { align: "center" });
-  y += 8;
+  // Summary cards
+  const COL1 = 18, COL2 = 108;
+  y = sectionTitle(doc, "Financial Overview", y);
+  y = divider(doc, y + 4);
 
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  const start = new Date(data.startDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  const end = new Date(data.endDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  doc.text(`Period: ${start} - ${end}`, 105, y, { align: "center" });
-  y += 10;
-
-  y = addLine(doc, y);
-
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(60, 60, 60);
-  doc.text("Financial Summary", 20, y);
-  y += 10;
-
-  const colLeft = 20;
-  const colRight = 110;
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Total Income (UGX)", colLeft, y);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(22, 163, 74);
-  doc.text(formatCurrencyPlain(data.totalIncome.UGX, "UGX"), colLeft, y + 5);
-
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Total Income (USD)", colRight, y);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(22, 163, 74);
-  doc.text(formatCurrencyPlain(data.totalIncome.USD, "USD"), colRight, y + 5);
-  y += 16;
-
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Total Expenses (UGX)", colLeft, y);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(220, 38, 38);
-  doc.text(formatCurrencyPlain(data.totalExpenses.UGX, "UGX"), colLeft, y + 5);
-
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Total Expenses (USD)", colRight, y);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(220, 38, 38);
-  doc.text(formatCurrencyPlain(data.totalExpenses.USD, "USD"), colRight, y + 5);
-  y += 16;
-
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Net Balance (UGX)", colLeft, y);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(data.netBalance.UGX >= 0 ? 22 : 220, data.netBalance.UGX >= 0 ? 163 : 38, data.netBalance.UGX >= 0 ? 74 : 38);
-  doc.text(formatCurrencyPlain(data.netBalance.UGX, "UGX"), colLeft, y + 5);
-
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(120, 120, 120);
-  doc.text("Net Balance (USD)", colRight, y);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(data.netBalance.USD >= 0 ? 22 : 220, data.netBalance.USD >= 0 ? 163 : 38, data.netBalance.USD >= 0 ? 74 : 38);
-  doc.text(formatCurrencyPlain(data.netBalance.USD, "USD"), colRight, y + 5);
-  y += 16;
-
-  y = addLine(doc, y);
-
-  if (data.incomeByFeeType.length > 0) {
+  const kv = (label: string, val: string, x: number, isRed = false) => {
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(140, 140, 140);
+    doc.text(label, x, y);
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PRIMARY_GREEN);
-    doc.text("Income by Fee Type", 20, y);
-    y += 8;
+    if (isRed) { doc.setTextColor(200, 38, 38); } else { doc.setTextColor(...PRIMARY_GREEN); }
+    doc.text(val, x, y + 6);
+  };
 
-    y = addTableHeader(doc, y, [
-      { label: "Fee Type", x: 24 },
-      { label: "Currency", x: 120 },
-      { label: "Amount", x: 186, align: "right" },
+  // Income
+  kv("Total Income (UGX)", fmt(data.totalIncome.UGX, "UGX"), COL1);
+  kv("Total Income (USD)", fmt(data.totalIncome.USD, "USD"), COL2);
+  y += 16;
+
+  // Expenses
+  kv("Total Expenses (UGX)", fmt(data.totalExpenses.UGX, "UGX"), COL1, true);
+  kv("Total Expenses (USD)", fmt(data.totalExpenses.USD, "USD"), COL2, true);
+  y += 16;
+
+  // Net balance
+  const ugxPos = data.netBalance.UGX >= 0;
+  const usdPos = data.netBalance.USD >= 0;
+  doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(140, 140, 140);
+  doc.text("Net Balance (UGX)", COL1, y);
+  doc.setFontSize(11); doc.setFont("helvetica", "bold");
+  doc.setTextColor(ugxPos ? 27 : 200, ugxPos ? 67 : 38, ugxPos ? 50 : 38);
+  doc.text(fmt(data.netBalance.UGX, "UGX"), COL1, y + 6);
+  doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(140, 140, 140);
+  doc.text("Net Balance (USD)", COL2, y);
+  doc.setFontSize(11); doc.setFont("helvetica", "bold");
+  doc.setTextColor(usdPos ? 27 : 200, usdPos ? 67 : 38, usdPos ? 50 : 38);
+  doc.text(fmt(data.netBalance.USD, "USD"), COL2, y + 6);
+  y += 22;
+
+  if (data.incomeByFeeType.length > 0) {
+    y = sectionTitle(doc, "Income by Fee Type", y);
+    y = divider(doc, y + 4);
+    y = tableHeader(doc, y, [
+      { label: "Fee Type", x: 19 },
+      { label: "Currency", x: 110 },
+      { label: "Amount", x: 191, align: "right" },
     ]);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(40, 40, 40);
-    data.incomeByFeeType.forEach((item, index) => {
+    data.incomeByFeeType.forEach((item, i) => {
       if (y > 260) { doc.addPage(); y = 20; }
-      const bg = index % 2 === 0 ? 245 : 255;
-      doc.setFillColor(bg, 250, index % 2 === 0 ? 247 : 255);
-      doc.rect(20, y - 4, 170, 8, "F");
-      doc.text(item.feeType, 24, y + 1);
-      doc.text(item.currency, 120, y + 1);
-      doc.text(formatCurrencyPlain(item.amount, item.currency), 186, y + 1, { align: "right" });
+      const even = i % 2 === 0;
+      doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+      doc.rect(15, y - 4, 180, 8, "F");
+      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+      doc.text(item.feeType, 19, y + 1);
+      doc.text(item.currency, 110, y + 1);
+      doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+      doc.text(fmt(item.amount, item.currency), 191, y + 1, { align: "right" });
       y += 8;
     });
     y += 6;
-    y = addLine(doc, y);
   }
 
   if (data.expensesByCategory.length > 0) {
     if (y > 220) { doc.addPage(); y = 20; }
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PRIMARY_GREEN);
-    doc.text("Expenses by Category", 20, y);
-    y += 8;
-
-    y = addTableHeader(doc, y, [
-      { label: "Category", x: 24 },
-      { label: "Currency", x: 120 },
-      { label: "Amount", x: 186, align: "right" },
+    y = sectionTitle(doc, "Expenses by Category", y);
+    y = divider(doc, y + 4);
+    y = tableHeader(doc, y, [
+      { label: "Category", x: 19 },
+      { label: "Currency", x: 110 },
+      { label: "Amount", x: 191, align: "right" },
     ]);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(40, 40, 40);
-    data.expensesByCategory.forEach((item, index) => {
+    data.expensesByCategory.forEach((item, i) => {
       if (y > 260) { doc.addPage(); y = 20; }
-      const bg = index % 2 === 0 ? 245 : 255;
-      doc.setFillColor(bg, 250, index % 2 === 0 ? 247 : 255);
-      doc.rect(20, y - 4, 170, 8, "F");
-      doc.text(item.category, 24, y + 1);
-      doc.text(item.currency, 120, y + 1);
-      doc.text(formatCurrencyPlain(item.amount, item.currency), 186, y + 1, { align: "right" });
+      const even = i % 2 === 0;
+      doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+      doc.rect(15, y - 4, 180, 8, "F");
+      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+      doc.text(item.category, 19, y + 1);
+      doc.text(item.currency, 110, y + 1);
+      doc.setFont("helvetica", "bold"); doc.setTextColor(200, 38, 38);
+      doc.text(fmt(item.amount, item.currency), 191, y + 1, { align: "right" });
       y += 8;
     });
   }
@@ -255,7 +354,7 @@ export function generateFinancialReportPDF(data: FinancialSummary, branding?: Br
   doc.save(`financial-report-${data.period}-${new Date().toISOString().split("T")[0]}.pdf`);
 }
 
-// ─── Master Payment Report ───────────────────────────────────────────────────
+// ─── Master Payment Report ────────────────────────────────────────────────────
 
 export interface MasterPaymentRow {
   studentName: string;
@@ -275,77 +374,58 @@ export function generateMasterPaymentPDF(
   branding?: BrandingParam
 ): void {
   const doc = new jsPDF({ orientation: "landscape" });
-  let y = addHeader(doc, branding);
-
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(0, 0, 0);
-  const parts: string[] = ["Master Payment Report"];
-  if (filters.term) parts.push(`— ${filters.term}`);
-  if (filters.classGrade) parts.push(`— ${filters.classGrade}`);
-  doc.text(parts.join(" "), 148.5, y, { align: "center" });
-  y += 6;
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}  |  ${payments.length} record(s)`, 148.5, y, { align: "center" });
-  y += 8;
-  y = addLine(doc, y);
+  const PAGE_W = 297;
+  const filterParts = [filters.term, filters.classGrade].filter(Boolean).join(" · ");
+  let y = addHeaderLandscape(
+    doc,
+    "Master Payment Report",
+    filterParts || `${payments.length} record(s)`,
+    branding
+  );
 
   const cols = [
-    { label: "Student Name", x: 15, w: 55 },
-    { label: "Adm. No.", x: 70, w: 25 },
-    { label: "Class", x: 95, w: 25 },
-    { label: "Receipt #", x: 120, w: 30 },
-    { label: "Fee Type", x: 150, w: 35 },
-    { label: "Term", x: 185, w: 25 },
-    { label: "Date", x: 210, w: 30 },
-    { label: "Amount", x: 240, w: 42 },
+    { label: "Student Name", x: 15 },
+    { label: "Adm. No.", x: 70 },
+    { label: "Class", x: 96 },
+    { label: "Receipt #", x: 120 },
+    { label: "Fee Type", x: 152 },
+    { label: "Term", x: 186 },
+    { label: "Date", x: 210 },
+    { label: "Amount", x: 283, align: "right" as const },
   ];
 
-  doc.setFillColor(...PRIMARY_GREEN);
-  doc.rect(10, y - 4, 277, 9, "F");
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  cols.forEach(c => doc.text(c.label, c.x, y + 2));
-  y += 13;
+  y = tableHeader(doc, y, cols, PAGE_W);
 
   const totals: Record<string, number> = {};
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(40, 40, 40);
-
   payments.forEach((p, i) => {
-    if (y > 190) { doc.addPage(); y = 20; }
-    const bg = i % 2 === 0 ? 245 : 255;
-    doc.setFillColor(bg, 250, i % 2 === 0 ? 247 : 255);
-    doc.rect(10, y - 4, 277, 8, "F");
-    doc.text((p.studentName || "").substring(0, 30), cols[0].x, y + 1);
-    doc.text((p.studentAdmissionNumber || "").substring(0, 12), cols[1].x, y + 1);
-    doc.text((p.studentClassGrade || "").substring(0, 12), cols[2].x, y + 1);
-    doc.text((p.receiptNumber || "").substring(0, 14), cols[3].x, y + 1);
-    doc.text((p.feeType || "").substring(0, 18), cols[4].x, y + 1);
-    doc.text((p.term || "").substring(0, 10), cols[5].x, y + 1);
-    const dateStr = p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "";
-    doc.text(dateStr, cols[6].x, y + 1);
-    doc.text(formatCurrencyPlain(p.amount, p.currency), cols[7].x, y + 1);
-    y += 8;
+    if (y > 185) { doc.addPage(); y = 20; }
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 4, PAGE_W - 30, 8, "F");
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+    doc.text((p.studentName || "").substring(0, 26), 15, y + 1);
+    doc.text((p.studentAdmissionNumber || "").substring(0, 10), 70, y + 1);
+    doc.text((p.studentClassGrade || "").substring(0, 10), 96, y + 1);
+    doc.text((p.receiptNumber || "").substring(0, 12), 120, y + 1);
+    doc.text((p.feeType || "").substring(0, 16), 152, y + 1);
+    doc.text((p.term || "").substring(0, 8), 186, y + 1);
+    const ds = p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "";
+    doc.text(ds, 210, y + 1);
+    doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+    doc.text(fmt(p.amount, p.currency), 283, y + 1, { align: "right" });
     totals[p.currency] = (totals[p.currency] || 0) + p.amount;
+    y += 8;
   });
 
   y += 4;
-  y = addLine(doc, y);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Totals:", 15, y);
+  y = divider(doc, y, 15, PAGE_W - 15);
+  doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+  doc.text("Grand Totals:", 15, y);
   y += 7;
-  Object.entries(totals).forEach(([cur, total]) => {
+  Object.entries(totals).forEach(([cur, amt]) => {
     doc.setFontSize(9);
-    doc.text(`${cur}: ${formatCurrencyPlain(total, cur)}`, 25, y);
+    doc.text(`${cur}: ${fmt(amt, cur)}`, 25, y);
     y += 6;
   });
 
@@ -353,7 +433,7 @@ export function generateMasterPaymentPDF(
   doc.save(`master-payment-report-${new Date().toISOString().split("T")[0]}.pdf`);
 }
 
-// ─── Payslip PDF ─────────────────────────────────────────────────────────────
+// ─── Payslip ──────────────────────────────────────────────────────────────────
 
 export interface PayslipData {
   staffName: string;
@@ -373,106 +453,75 @@ export interface PayslipData {
 
 export function generatePayslipPDF(data: PayslipData, branding?: BrandingParam): void {
   const doc = new jsPDF();
-  let y = addHeader(doc, branding);
+  let y = addHeader(doc, "PAYSLIP", data.month, branding);
 
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(0, 0, 0);
-  doc.text("PAYSLIP", 105, y, { align: "center" });
-  y += 7;
+  y = sectionTitle(doc, "Employee Details", y);
+  y = divider(doc, y + 4);
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Month: ${data.month}`, 105, y, { align: "center" });
-  y += 10;
-  y = addLine(doc, y);
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Employee Details", 20, y);
-  y += 8;
-
-  const addRow = (label: string, value: string) => {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(120, 120, 120);
-    doc.text(label, 25, y);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(40, 40, 40);
-    doc.text(value, 90, y);
+  const kv2 = (label: string, val: string) => {
+    doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(130, 130, 130);
+    doc.text(label, 20, y);
+    doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
+    doc.text(val, 95, y);
     y += 7;
   };
 
-  addRow("Name:", data.staffName);
-  addRow("Staff Type:", data.staffType === "teacher" ? "Teaching Staff" : "Non-Teaching Staff");
-  if (data.position) addRow("Position:", data.position);
-  if (data.subjects && data.subjects.length > 0) addRow("Subjects:", data.subjects.join(", "));
-  addRow("Status:", data.status);
+  kv2("Name:", data.staffName);
+  kv2("Staff Type:", data.staffType === "teacher" ? "Teaching Staff" : "Non-Teaching Staff");
+  if (data.position) kv2("Position:", data.position);
+  if (data.subjects?.length) kv2("Subjects:", data.subjects.join(", "));
+  kv2("Status:", data.status);
   y += 4;
-  y = addLine(doc, y);
 
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Earnings", 20, y);
-  y += 8;
+  y = sectionTitle(doc, "Earnings", y);
+  y = divider(doc, y + 4);
 
-  const addAmountRow = (label: string, amount: number, isTotal = false) => {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", isTotal ? "bold" : "normal");
-    doc.setTextColor(isTotal ? 40 : 80, isTotal ? 40 : 80, isTotal ? 40 : 80);
-    doc.text(label, 25, y);
+  const amtRow = (label: string, amount: number, isDeduction = false) => {
+    doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(60, 60, 60);
+    doc.text(label, 22, y);
     doc.setFont("helvetica", "bold");
-    doc.text(formatCurrencyPlain(amount, data.currency), 186, y, { align: "right" });
+    if (isDeduction) { doc.setTextColor(200, 38, 38); } else { doc.setTextColor(...PRIMARY_GREEN); }
+    doc.text(fmt(amount, data.currency), 192, y, { align: "right" });
     y += 7;
   };
 
-  addAmountRow("Base Salary", data.baseSalary);
-  if (data.accommodationAllowance > 0) addAmountRow("Accommodation Allowance", data.accommodationAllowance);
-  if (data.transportAllowance > 0) addAmountRow("Transport Allowance", data.transportAllowance);
-  if (data.otherAllowances > 0) addAmountRow("Other Allowances", data.otherAllowances);
+  amtRow("Base Salary", data.baseSalary);
+  if (data.accommodationAllowance > 0) amtRow("Accommodation Allowance", data.accommodationAllowance);
+  if (data.transportAllowance > 0) amtRow("Transport Allowance", data.transportAllowance);
+  if (data.otherAllowances > 0) amtRow("Other Allowances", data.otherAllowances);
 
-  const grossPay = data.baseSalary + data.accommodationAllowance + data.transportAllowance + data.otherAllowances;
+  const gross = data.baseSalary + data.accommodationAllowance + data.transportAllowance + data.otherAllowances;
   y += 2;
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.line(25, y, 186, y);
-  y += 5;
-  addAmountRow("Gross Pay", grossPay, true);
-  y += 4;
+  divider(doc, y, 18, 195);
+  y += 6;
+  doc.setFontSize(9.5); doc.setFont("helvetica", "bold"); doc.setTextColor(50, 50, 50);
+  doc.text("Gross Pay:", 22, y);
+  doc.setTextColor(...PRIMARY_GREEN);
+  doc.text(fmt(gross, data.currency), 192, y, { align: "right" });
+  y += 10;
 
   if (data.deductions > 0) {
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PRIMARY_GREEN);
-    doc.text("Deductions", 20, y);
-    y += 8;
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(220, 38, 38);
-    doc.text(data.deductionNotes || "Deductions", 25, y);
-    doc.setFont("helvetica", "bold");
-    doc.text(`-${formatCurrencyPlain(data.deductions, data.currency)}`, 186, y, { align: "right" });
-    y += 10;
+    y = sectionTitle(doc, "Deductions", y);
+    y = divider(doc, y + 4);
+    amtRow(data.deductionNotes || "Deductions", data.deductions, true);
+    y += 4;
   }
 
-  y = addLine(doc, y);
-
-  const netPay = grossPay - data.deductions;
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Net Pay:", 25, y);
-  doc.text(formatCurrencyPlain(netPay, data.currency), 186, y, { align: "right" });
+  divider(doc, y, 18, 195);
+  y += 8;
+  const net = gross - data.deductions;
+  doc.setFillColor(...PALE_MINT);
+  doc.roundedRect(15, y, 180, 22, 4, 4, "F");
+  doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 120, 90);
+  doc.text("NET PAY", 105, y + 9, { align: "center" });
+  doc.setFontSize(18); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+  doc.text(fmt(net, data.currency), 105, y + 18, { align: "center" });
 
   addFooter(doc, branding);
-  doc.save(`payslip-${data.staffName.replace(/\s+/g, "-")}-${data.month}-${new Date().toISOString().split("T")[0]}.pdf`);
+  doc.save(`payslip-${data.staffName.replace(/\s+/g, "-")}-${data.month}.pdf`);
 }
 
-// ─── Dividend Distribution Report ────────────────────────────────────────────
+// ─── Dividend Distribution Report ─────────────────────────────────────────────
 
 export interface DividendReportData {
   netProfit: number;
@@ -486,99 +535,66 @@ export interface DividendReportData {
 
 export function generateDividendReportPDF(data: DividendReportData, branding?: BrandingParam): void {
   const doc = new jsPDF();
-  let y = addHeader(doc, branding);
+  let y = addHeader(
+    doc,
+    "Dividend Distribution",
+    `${data.term} · ${data.academicYear}`,
+    branding
+  );
 
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Dividend Distribution Report", 105, y, { align: "center" });
-  y += 8;
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text(`${data.term} · Academic Year ${data.academicYear} · ${data.currency}`, 105, y, { align: "center" });
-  y += 4;
-  doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 105, y, { align: "center" });
-  y += 10;
-  y = addLine(doc, y);
-
+  // Net profit highlight
   doc.setFillColor(...PALE_MINT);
-  doc.roundedRect(20, y, 170, 28, 4, 4, "F");
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Net Profit (Total Revenue - Total Expenses)", 105, y + 8, { align: "center" });
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text(formatCurrencyPlain(data.netProfit, data.currency), 105, y + 20, { align: "center" });
+  doc.roundedRect(15, y, 180, 28, 4, 4, "F");
+  doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 120, 90);
+  doc.text("Net Profit  (Total Revenue − Total Expenses)", 105, y + 9, { align: "center" });
+  doc.setFontSize(22); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+  doc.text(fmt(data.netProfit, data.currency), 105, y + 22, { align: "center" });
   y += 36;
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Shareholder Payouts", 20, y);
-  y += 8;
-
-  y = addTableHeader(doc, y, [
-    { label: "Shareholder", x: 25 },
-    { label: "Share %", x: 110, align: "right" },
-    { label: "Dividend Amount", x: 186, align: "right" },
+  y = sectionTitle(doc, "Shareholder Payouts", y);
+  y = divider(doc, y + 4);
+  y = tableHeader(doc, y, [
+    { label: "Shareholder", x: 19 },
+    { label: "Share %", x: 120, align: "right" },
+    { label: "Dividend Amount", x: 191, align: "right" },
   ]);
 
-  data.payouts.forEach((payout, idx) => {
-    if (idx % 2 === 0) {
-      doc.setFillColor(245, 250, 247);
-      doc.rect(20, y - 4, 170, 10, "F");
-    }
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-    doc.text(payout.shareholderName, 25, y + 2);
-    doc.text(`${parseFloat(payout.sharePercentage).toFixed(2)}%`, 110, y + 2, { align: "right" });
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PRIMARY_GREEN);
-    doc.text(formatCurrencyPlain(payout.payoutAmount, data.currency), 186, y + 2, { align: "right" });
-    y += 10;
+  data.payouts.forEach((payout, i) => {
+    if (y > 255) { doc.addPage(); y = 20; }
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 4, 180, 9, "F");
+    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+    doc.text(payout.shareholderName, 19, y + 2);
+    doc.text(`${parseFloat(payout.sharePercentage).toFixed(2)}%`, 120, y + 2, { align: "right" });
+    doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+    doc.text(fmt(payout.payoutAmount, data.currency), 191, y + 2, { align: "right" });
+    y += 9;
   });
 
-  y = addLine(doc, y);
+  y += 4;
+  y = divider(doc, y);
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(0, 0, 0);
-  doc.text("Total Allocated:", 25, y);
+  doc.setFontSize(9.5); doc.setFont("helvetica", "bold"); doc.setTextColor(40, 40, 40);
+  doc.text("Total Allocated:", 19, y);
   doc.setTextColor(...PRIMARY_GREEN);
-  doc.text(formatCurrencyPlain(data.totalAllocated, data.currency), 186, y, { align: "right" });
-  y += 10;
+  doc.text(fmt(data.totalAllocated, data.currency), 191, y, { align: "right" });
+  y += 8;
 
   if (data.retainedEarnings > 0) {
     doc.setFillColor(255, 249, 231);
-    doc.roundedRect(20, y, 170, 18, 3, 3, "F");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text("Retained Earnings (Unallocated profit)", 25, y + 6);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(180, 120, 0);
-    doc.text(formatCurrencyPlain(data.retainedEarnings, data.currency), 186, y + 12, { align: "right" });
-    y += 26;
+    doc.roundedRect(15, y, 180, 16, 3, 3, "F");
+    doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(120, 80, 0);
+    doc.text("Retained Earnings (Unallocated):", 19, y + 11);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+    doc.text(fmt(data.retainedEarnings, data.currency), 191, y + 11, { align: "right" });
+    y += 24;
   }
 
-  y += 4;
-  doc.setFillColor(...PRIMARY_GREEN);
-  doc.roundedRect(20, y, 170, 18, 3, 3, "F");
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(255, 255, 255);
-  doc.text("Net Profit", 25, y + 6);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text(formatCurrencyPlain(data.netProfit, data.currency), 186, y + 12, { align: "right" });
-
   addFooter(doc, branding);
-  doc.save(`dividend-report-${data.term.replace(/\s/g, "-")}-${data.academicYear.replace("/", "-")}-${new Date().toISOString().split("T")[0]}.pdf`);
+  doc.save(
+    `dividend-report-${data.term.replace(/\s/g, "-")}-${data.academicYear.replace("/", "-")}-${new Date().toISOString().split("T")[0]}.pdf`
+  );
 }
 
 // ─── Detailed Expense Report ──────────────────────────────────────────────────
@@ -599,114 +615,79 @@ export function generateDetailedExpenseReportPDF(
   branding?: BrandingParam
 ): void {
   const doc = new jsPDF();
-  let y = addHeader(doc, branding);
+  const filterLabel = [filters.term, filters.currency].filter(Boolean).join(" · ");
+  let y = addHeader(
+    doc,
+    "Expense Report",
+    filterLabel || `${expenses.length} transaction(s)`,
+    branding
+  );
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Detailed Expense Report", 105, y, { align: "center" });
-  y += 7;
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  const filterParts: string[] = [];
-  if (filters.term) filterParts.push(filters.term);
-  if (filters.currency) filterParts.push(filters.currency);
-  if (filterParts.length) doc.text(filterParts.join(" · "), 105, y, { align: "center" });
-  y += 4;
-  doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}  ·  ${expenses.length} transaction(s)`, 105, y, { align: "center" });
-  y += 10;
-  y = addLine(doc, y);
-
-  y = addTableHeader(doc, y, [
-    { label: "Date", x: 22 },
-    { label: "Category", x: 52 },
-    { label: "Description", x: 92 },
+  y = tableHeader(doc, y, [
+    { label: "Date", x: 19 },
+    { label: "Category", x: 48 },
+    { label: "Description", x: 88 },
     { label: "Recorded By", x: 148 },
-    { label: "Amount", x: 186, align: "right" },
+    { label: "Amount", x: 191, align: "right" },
   ]);
 
-  const categoryTotals: Record<string, Record<string, number>> = {};
+  const catTotals: Record<string, number> = {};
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  expenses.forEach((exp, i) => {
+    if (y > 262) { doc.addPage(); y = 20; }
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 3, 180, 8, "F");
 
-  expenses.forEach((exp, idx) => {
-    if (y > 265) { doc.addPage(); y = 20; }
-    const bg = idx % 2 === 0 ? 245 : 255;
-    doc.setFillColor(bg, 250, idx % 2 === 0 ? 247 : 255);
-    doc.rect(20, y - 3, 170, 8, "F");
-
-    const dateStr = exp.expenseDate
+    const ds = exp.expenseDate
       ? new Date(exp.expenseDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
       : "N/A";
 
-    doc.setTextColor(80, 80, 80);
-    doc.text(dateStr, 22, y + 2);
-    doc.text(exp.category.substring(0, 14), 52, y + 2);
-    doc.text(exp.description.substring(0, 26), 92, y + 2);
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(60, 60, 60);
+    doc.text(ds, 19, y + 2);
+    doc.text(exp.category.substring(0, 14), 48, y + 2);
+    doc.text(exp.description.substring(0, 30), 88, y + 2);
     doc.text((exp.recordedBy || "—").substring(0, 16), 148, y + 2);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PRIMARY_GREEN);
-    doc.text(formatCurrencyPlain(exp.amount, exp.currency), 186, y + 2, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
+    doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+    doc.text(fmt(exp.amount, exp.currency), 191, y + 2, { align: "right" });
     y += 8;
 
-    const key = `${exp.category}__${exp.currency}`;
-    if (!categoryTotals[key]) categoryTotals[key] = { amount: 0 };
-    categoryTotals[key].amount += exp.amount;
+    const key = `${exp.category} (${exp.currency})`;
+    catTotals[key] = (catTotals[key] || 0) + exp.amount;
   });
 
   y += 4;
-  y = addLine(doc, y);
-
-  if (y > 230) { doc.addPage(); y = 20; }
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Total Category Expenditure", 20, y);
-  y += 8;
-
-  y = addTableHeader(doc, y, [
-    { label: "Category", x: 24 },
-    { label: "Currency", x: 120 },
-    { label: "Total", x: 186, align: "right" },
+  if (y > 220) { doc.addPage(); y = 20; }
+  y = sectionTitle(doc, "Total Expenditure by Category", y);
+  y = divider(doc, y + 4);
+  y = tableHeader(doc, y, [
+    { label: "Category", x: 19 },
+    { label: "Total Amount", x: 191, align: "right" },
   ]);
 
-  const categoryGroups = Object.entries(categoryTotals);
-  categoryGroups.sort(([a], [b]) => a.localeCompare(b));
-
-  let grandTotals: Record<string, number> = {};
-  categoryGroups.forEach(([key, val], idx) => {
-    const [cat, cur] = key.split("__");
-    const bg = idx % 2 === 0 ? 245 : 255;
-    doc.setFillColor(bg, 250, idx % 2 === 0 ? 247 : 255);
-    doc.rect(20, y - 3, 170, 8, "F");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
-    doc.text(cat, 24, y + 2);
-    doc.text(cur, 120, y + 2);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PRIMARY_GREEN);
-    doc.text(formatCurrencyPlain(val.amount, cur), 186, y + 2, { align: "right" });
-    grandTotals[cur] = (grandTotals[cur] || 0) + val.amount;
+  let grandUGX = 0, grandUSD = 0;
+  Object.entries(catTotals).sort(([a], [b]) => a.localeCompare(b)).forEach(([key, total], i) => {
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 3, 180, 8, "F");
+    const cur = key.includes("USD") ? "USD" : "UGX";
+    doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(60, 60, 60);
+    doc.text(key, 19, y + 2);
+    doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+    doc.text(fmt(total, cur), 191, y + 2, { align: "right" });
+    if (cur === "UGX") grandUGX += total; else grandUSD += total;
     y += 8;
   });
 
   y += 4;
-  y = addLine(doc, y);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Grand Total:", 24, y);
-  let totalX = y;
-  Object.entries(grandTotals).forEach(([cur, amt]) => {
-    doc.text(`${cur}: ${formatCurrencyPlain(amt, cur)}`, 80, totalX);
-    totalX += 7;
-  });
+  y = divider(doc, y);
+  doc.setFontSize(9.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN);
+  doc.text("Grand Total:", 19, y);
+  const totalsText = [
+    grandUGX > 0 ? `UGX: ${fmt(grandUGX, "UGX")}` : null,
+    grandUSD > 0 ? `USD: ${fmt(grandUSD, "USD")}` : null,
+  ].filter(Boolean).join("   ");
+  doc.text(totalsText, 191, y, { align: "right" });
 
   addFooter(doc, branding);
   doc.save(`detailed-expense-report-${new Date().toISOString().split("T")[0]}.pdf`);
@@ -729,106 +710,91 @@ export function generateDetailedBudgetReportPDF(
   branding?: BrandingParam
 ): void {
   const doc = new jsPDF();
-  let y = addHeader(doc, branding);
+  let y = addHeader(
+    doc,
+    "Budget vs Actual",
+    `${meta.term} · ${meta.academicYear}`,
+    branding
+  );
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Budget vs Actual Report", 105, y, { align: "center" });
-  y += 7;
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text(`${meta.term} · Academic Year ${meta.academicYear}`, 105, y, { align: "center" });
-  y += 4;
-  doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 105, y, { align: "center" });
-  y += 10;
-  y = addLine(doc, y);
-
-  y = addTableHeader(doc, y, [
-    { label: "Category", x: 22 },
-    { label: "Currency", x: 75 },
+  y = tableHeader(doc, y, [
+    { label: "Category", x: 19 },
+    { label: "Currency", x: 72 },
     { label: "Estimated", x: 108, align: "right" },
     { label: "Actual", x: 140, align: "right" },
-    { label: "Variance", x: 168, align: "right" },
-    { label: "Utilization", x: 186, align: "right" },
+    { label: "Variance", x: 170, align: "right" },
+    { label: "Utilization", x: 191, align: "right" },
   ]);
 
-  let overBudget = 0, underBudget = 0;
-  const currencyTotals: Record<string, { estimated: number; actual: number }> = {};
+  let overCount = 0, underCount = 0;
+  const currTotals: Record<string, { est: number; act: number }> = {};
 
-  comparison.forEach((row, idx) => {
-    if (y > 265) { doc.addPage(); y = 20; }
-    const utilization = row.estimated > 0 ? Math.round((row.actual / row.estimated) * 100) : 0;
+  comparison.forEach((row, i) => {
+    if (y > 260) { doc.addPage(); y = 20; }
+    const util = row.estimated > 0 ? Math.round((row.actual / row.estimated) * 100) : 0;
     const isOver = row.status === "Over Budget";
-    if (isOver) overBudget++;
-    else underBudget++;
+    if (isOver) overCount++; else underCount++;
 
-    const bg = idx % 2 === 0 ? 245 : 255;
-    doc.setFillColor(bg, 250, idx % 2 === 0 ? 247 : 255);
-    doc.rect(20, y - 3, 170, 8, "F");
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 3, 180, 8, "F");
 
-    doc.setFontSize(8.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
-    doc.text(row.category.substring(0, 18), 22, y + 2);
-    doc.text(row.currency, 75, y + 2);
-    doc.text(formatCurrencyPlain(row.estimated, row.currency), 108, y + 2, { align: "right" });
-    doc.text(formatCurrencyPlain(row.actual, row.currency), 140, y + 2, { align: "right" });
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+    doc.text(row.category.substring(0, 20), 19, y + 2);
+    doc.text(row.currency, 72, y + 2);
+    doc.text(fmt(row.estimated, row.currency), 108, y + 2, { align: "right" });
+    doc.text(fmt(row.actual, row.currency), 140, y + 2, { align: "right" });
 
-    // Variance: positive = under budget (saved), negative = over budget
-    const varianceAmt = row.estimated - row.actual; // positive = under budget
+    // Variance: positive = under budget (good), negative = over
+    const saved = row.estimated - row.actual;
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(varianceAmt >= 0 ? 27 : 220, varianceAmt >= 0 ? 163 : 38, varianceAmt >= 0 ? 74 : 38);
-    doc.text(`${varianceAmt >= 0 ? "+" : ""}${formatCurrencyPlain(Math.abs(row.variance), row.currency)}`, 168, y + 2, { align: "right" });
+    doc.setTextColor(saved >= 0 ? 27 : 200, saved >= 0 ? 67 : 38, saved >= 0 ? 50 : 38);
+    doc.text(`${saved >= 0 ? "+" : ""}${fmt(Math.abs(row.variance), row.currency)}`, 170, y + 2, { align: "right" });
 
     // Utilization %
-    const utilColor = utilization > 100 ? [220, 38, 38] : utilization > 85 ? [245, 158, 11] : [27, 67, 50];
-    doc.setTextColor(utilColor[0], utilColor[1], utilColor[2]);
-    doc.text(`${utilization}%`, 186, y + 2, { align: "right" });
-    doc.setFont("helvetica", "normal");
+    const utilR = util > 100 ? 200 : util > 85 ? 180 : 27;
+    const utilG = util > 100 ? 38 : util > 85 ? 100 : 67;
+    const utilB = util > 100 ? 38 : util > 85 ? 0 : 50;
+    doc.setTextColor(utilR, utilG, utilB);
+    doc.text(`${util}%`, 191, y + 2, { align: "right" });
     y += 8;
 
-    if (!currencyTotals[row.currency]) currencyTotals[row.currency] = { estimated: 0, actual: 0 };
-    currencyTotals[row.currency].estimated += row.estimated;
-    currencyTotals[row.currency].actual += row.actual;
+    if (!currTotals[row.currency]) currTotals[row.currency] = { est: 0, act: 0 };
+    currTotals[row.currency].est += row.estimated;
+    currTotals[row.currency].act += row.actual;
   });
 
-  y += 4;
-  y = addLine(doc, y);
+  y += 6;
+  if (y > 230) { doc.addPage(); y = 20; }
+  y = sectionTitle(doc, "Budget Summary by Currency", y);
+  y = divider(doc, y + 4);
 
-  // Summary row
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...PRIMARY_GREEN);
-  doc.text("Totals by Currency:", 22, y);
-  y += 8;
-
-  Object.entries(currencyTotals).forEach(([cur, totals]) => {
-    if (y > 265) { doc.addPage(); y = 20; }
-    const overallUtil = totals.estimated > 0 ? Math.round((totals.actual / totals.estimated) * 100) : 0;
+  Object.entries(currTotals).forEach(([cur, { est, act }]) => {
+    const overallUtil = est > 0 ? Math.round((act / est) * 100) : 0;
     doc.setFillColor(...PALE_MINT);
-    doc.roundedRect(20, y, 170, 14, 2, 2, "F");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
-    doc.text(cur, 25, y + 9);
+    doc.roundedRect(15, y, 180, 18, 3, 3, "F");
+    doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(60, 80, 70);
+    doc.text(cur, 22, y + 12);
     doc.setFont("helvetica", "bold");
-    doc.text(`Budget: ${formatCurrencyPlain(totals.estimated, cur)}`, 50, y + 9);
-    doc.text(`Actual: ${formatCurrencyPlain(totals.actual, cur)}`, 110, y + 9);
-    const utilizationColor = overallUtil > 100 ? [220, 38, 38] : [27, 67, 50];
-    doc.setTextColor(utilizationColor[0], utilizationColor[1], utilizationColor[2]);
-    doc.text(`${overallUtil}% utilized`, 165, y + 9, { align: "right" });
-    y += 20;
+    doc.text(`Budget: ${fmt(est, cur)}`, 45, y + 12);
+    doc.text(`Actual: ${fmt(act, cur)}`, 115, y + 12);
+    const uR = overallUtil > 100 ? 200 : 27, uG = overallUtil > 100 ? 38 : 67, uB = overallUtil > 100 ? 38 : 50;
+    doc.setTextColor(uR, uG, uB);
+    doc.text(`${overallUtil}% utilized`, 191, y + 12, { align: "right" });
+    y += 24;
   });
 
-  y += 4;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Categories under budget: ${underBudget}  ·  Categories over budget: ${overBudget}`, 105, y, { align: "center" });
+  y += 2;
+  doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(120, 120, 120);
+  doc.text(
+    `Categories under budget: ${underCount}   ·   Categories over budget: ${overCount}`,
+    105,
+    y,
+    { align: "center" }
+  );
 
   addFooter(doc, branding);
-  doc.save(`budget-report-${meta.term.replace(/\s/g, "-")}-${meta.academicYear.replace("/", "-")}-${new Date().toISOString().split("T")[0]}.pdf`);
+  doc.save(
+    `budget-report-${meta.term.replace(/\s/g, "-")}-${meta.academicYear.replace("/", "-")}-${new Date().toISOString().split("T")[0]}.pdf`
+  );
 }
