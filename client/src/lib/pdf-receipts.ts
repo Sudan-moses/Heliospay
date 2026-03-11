@@ -285,50 +285,87 @@ export async function generatePaymentReceiptPDF(
   labelValue(doc, "Term", payment.term || "N/A", y, COL2);
   y = rowB1end;
 
-  const rowB2end = labelValue(doc, "Fee Type", payment.feeType || "N/A", y, COL1);
-  labelValue(doc, "Recorded By", payment.recordedBy || "N/A", y, COL2);
+  const rowB2end = labelValue(doc, "Recorded By", payment.recordedBy || "N/A", y, COL1);
   y = rowB2end;
 
   if (payment.notes) {
     y = labelValue(doc, "Notes", payment.notes, y, COL1);
   }
 
-  // Fee breakdown
-  if (payment.feeBreakdown) {
+  // ── Fee Breakdown Table ───────────────────────────────────────────────────
+  // Resolve items from payment.items (API), or fall back to feeBreakdown JSON
+  let feeItems: { feeType: string; amount: number }[] = [];
+  const apiItems = (payment as any).items;
+  if (Array.isArray(apiItems) && apiItems.length > 0) {
+    feeItems = apiItems;
+  } else if (payment.feeBreakdown) {
     try {
-      const bd =
-        typeof payment.feeBreakdown === "string"
-          ? JSON.parse(payment.feeBreakdown)
-          : payment.feeBreakdown;
-      if (Array.isArray(bd) && bd.length > 1) {
-        y += 2;
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(80, 80, 80);
-        doc.text("Fee Breakdown:", 20, y);
-        y += 5;
-        bd.forEach((item: { feeType: string; amount: number }) => {
-          if (y > 210) { doc.addPage(); y = 20; }
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(80, 80, 80);
-          doc.text(`• ${item.feeType}`, 26, y);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(...PRIMARY_GREEN);
-          doc.text(
-            formatCurrencyPlain(item.amount, payment.currency),
-            192,
-            y,
-            { align: "right" }
-          );
-          y += 6;
-        });
-        doc.setTextColor(0, 0, 0);
-        y += 2;
-      }
+      const bd = typeof payment.feeBreakdown === "string"
+        ? JSON.parse(payment.feeBreakdown)
+        : payment.feeBreakdown;
+      if (Array.isArray(bd) && bd.length > 0) feeItems = bd;
     } catch {}
+  }
+  if (feeItems.length === 0) {
+    feeItems = [{ feeType: payment.feeType || "Fee", amount: payment.amount }];
   }
 
   y += 4;
+  // Table header row
+  const TABLE_L = 15;
+  const TABLE_R = 195;
+  const TABLE_W = TABLE_R - TABLE_L;
+  const ROW_H = 8;
+
+  doc.setFillColor(...PRIMARY_GREEN);
+  doc.roundedRect(TABLE_L, y, TABLE_W, ROW_H, 1.5, 1.5, "F");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("Fee Type", TABLE_L + 5, y + 5.5);
+  doc.text("Amount", TABLE_R - 5, y + 5.5, { align: "right" });
+  y += ROW_H;
+
+  // Fee item rows
+  feeItems.forEach((item, idx) => {
+    if (y > 215) { doc.addPage(); y = 20; }
+    doc.setFillColor(idx % 2 === 0 ? 245 : 252, idx % 2 === 0 ? 250 : 255, idx % 2 === 0 ? 247 : 252);
+    doc.rect(TABLE_L, y, TABLE_W, ROW_H, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    doc.text(item.feeType || "Fee", TABLE_L + 5, y + 5.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PRIMARY_GREEN);
+    doc.text(
+      formatCurrencyPlain(item.amount, payment.currency),
+      TABLE_R - 5,
+      y + 5.5,
+      { align: "right" }
+    );
+    y += ROW_H;
+  });
+
+  // Total row
+  doc.setFillColor(216, 243, 220);
+  doc.rect(TABLE_L, y, TABLE_W, ROW_H + 1, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_GREEN);
+  doc.text("Total Paid", TABLE_L + 5, y + 6);
+  doc.text(
+    formatCurrencyPlain(payment.amount, payment.currency),
+    TABLE_R - 5,
+    y + 6,
+    { align: "right" }
+  );
+  y += ROW_H + 1;
+
+  // Table border
+  doc.setDrawColor(...PRIMARY_GREEN);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(TABLE_L, y - (feeItems.length + 1) * ROW_H - ROW_H - 1, TABLE_W, (feeItems.length + 2) * ROW_H + 1, 1.5, 1.5, "S");
+
+  y += 5;
   y = addDivider(doc, y);
 
   // ── Amount box ───────────────────────────────────────────────────────────

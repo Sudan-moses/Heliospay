@@ -2,6 +2,7 @@ import { db } from "./db";
 import {
   students,
   payments,
+  paymentItems,
   expenses,
   teachers,
   payrolls,
@@ -16,6 +17,7 @@ import {
   type InsertStudent,
   type Payment,
   type InsertPayment,
+  type PaymentFeeItemDto,
   type UpdateStudentRequest,
   type Expense,
   type InsertExpense,
@@ -48,8 +50,8 @@ export interface IStorage {
   updateStudent(id: number, student: UpdateStudentRequest): Promise<Student>;
   deleteStudent(id: number): Promise<void>;
   
-  getPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; studentAcademicYear: string })[]>;
-  createPayment(payment: InsertPayment): Promise<Payment>;
+  getPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; studentAcademicYear: string; items: PaymentFeeItemDto[] })[]>;
+  createPayment(payment: InsertPayment): Promise<Payment & { items: PaymentFeeItemDto[] }>;
 
   getExpenses(): Promise<Expense[]>;
   createExpense(expense: InsertExpense): Promise<Expense>;
@@ -77,9 +79,9 @@ export interface IStorage {
 
   getNonTeachingStaffMember(id: number): Promise<NonTeachingStaff | undefined>;
 
-  getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string }) | undefined>;
+  getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; items: PaymentFeeItemDto[] }) | undefined>;
 
-  getPaymentsFiltered(term?: string, classGrade?: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string })[]>;
+  getPaymentsFiltered(term?: string, classGrade?: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; items: PaymentFeeItemDto[] })[]>;
 
   getPayrollItemsForStaff(staffType: string, staffId: number): Promise<(PayrollItem & { payrollMonth: string; payrollStatus: string })[]>;
 
@@ -175,25 +177,58 @@ export class DatabaseStorage implements IStorage {
     await db.delete(students).where(eq(students.id, id));
   }
 
-  async getPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; studentAcademicYear: string })[]> {
+  private parseFeeItems(payment: Payment): PaymentFeeItemDto[] {
+    if (payment.feeBreakdown) {
+      try {
+        const parsed = JSON.parse(payment.feeBreakdown);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((i: any) => ({
+            feeType: i.feeType || payment.feeType,
+            amount: Number(i.amount) || 0,
+            currency: payment.currency,
+          }));
+        }
+      } catch {}
+    }
+    return [{ feeType: payment.feeType, amount: payment.amount, currency: payment.currency }];
+  }
+
+  async getPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; studentAcademicYear: string; items: PaymentFeeItemDto[] })[]> {
     const allPayments = await db.select().from(payments).orderBy(desc(payments.paymentDate));
     const allStudents = await db.select().from(students);
-    
+    const allItems = await db.select().from(paymentItems);
+
     return allPayments.map(payment => {
       const student = allStudents.find(s => s.id === payment.studentId);
+      const dbItems = allItems.filter(i => i.paymentId === payment.id);
+      const items: PaymentFeeItemDto[] = dbItems.length > 0
+        ? dbItems.map(i => ({ feeType: i.feeType, amount: i.amount, currency: i.currency }))
+        : this.parseFeeItems(payment);
       return {
         ...payment,
         studentName: student?.fullName || 'Unknown',
         studentAdmissionNumber: student?.admissionNumber || 'N/A',
         studentClassGrade: student?.classGrade || 'N/A',
         studentAcademicYear: student?.academicYear || 'N/A',
+        items,
       };
     });
   }
 
-  async createPayment(paymentData: InsertPayment): Promise<Payment> {
+  async createPayment(paymentData: InsertPayment): Promise<Payment & { items: PaymentFeeItemDto[] }> {
     const [payment] = await db.insert(payments).values(paymentData).returning();
-    return payment;
+    const feeItems = this.parseFeeItems(payment);
+    if (feeItems.length > 0) {
+      await db.insert(paymentItems).values(
+        feeItems.map(i => ({
+          paymentId: payment.id,
+          feeType: i.feeType,
+          amount: i.amount,
+          currency: i.currency,
+        }))
+      );
+    }
+    return { ...payment, items: feeItems };
   }
 
   async getExpenses(): Promise<Expense[]> {
@@ -372,30 +407,41 @@ export class DatabaseStorage implements IStorage {
     return staff;
   }
 
-  async getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string }) | undefined> {
+  async getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; items: PaymentFeeItemDto[] }) | undefined> {
     const [payment] = await db.select().from(payments).where(eq(payments.receiptNumber, receiptNumber));
     if (!payment) return undefined;
     const [student] = await db.select().from(students).where(eq(students.id, payment.studentId));
+    const dbItems = await db.select().from(paymentItems).where(eq(paymentItems.paymentId, payment.id));
+    const items: PaymentFeeItemDto[] = dbItems.length > 0
+      ? dbItems.map(i => ({ feeType: i.feeType, amount: i.amount, currency: i.currency }))
+      : this.parseFeeItems(payment);
     return {
       ...payment,
       studentName: student?.fullName || "Unknown",
       studentAdmissionNumber: student?.admissionNumber || "N/A",
       studentClassGrade: student?.classGrade || "N/A",
+      items,
     };
   }
 
-  async getPaymentsFiltered(term?: string, classGrade?: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string })[]> {
+  async getPaymentsFiltered(term?: string, classGrade?: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; items: PaymentFeeItemDto[] })[]> {
     const allPayments = await db.select().from(payments).orderBy(desc(payments.paymentDate));
     const allStudents = await db.select().from(students);
+    const allItems = await db.select().from(paymentItems);
 
     return allPayments
       .map(payment => {
         const student = allStudents.find(s => s.id === payment.studentId);
+        const dbItems = allItems.filter(i => i.paymentId === payment.id);
+        const items: PaymentFeeItemDto[] = dbItems.length > 0
+          ? dbItems.map(i => ({ feeType: i.feeType, amount: i.amount, currency: i.currency }))
+          : this.parseFeeItems(payment);
         return {
           ...payment,
           studentName: student?.fullName || 'Unknown',
           studentAdmissionNumber: student?.admissionNumber || 'N/A',
           studentClassGrade: student?.classGrade || 'N/A',
+          items,
         };
       })
       .filter(p => {

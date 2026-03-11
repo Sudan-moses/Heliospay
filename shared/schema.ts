@@ -33,6 +33,14 @@ export const payments = pgTable("payments", {
   notes: text("notes"),
 });
 
+export const paymentItems = pgTable("payment_items", {
+  id: serial("id").primaryKey(),
+  paymentId: integer("payment_id").notNull().references(() => payments.id, { onDelete: "cascade" }),
+  feeType: text("fee_type").notNull(),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("UGX"),
+});
+
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   category: text("category").notNull(),
@@ -191,10 +199,18 @@ export const payrollItemsRelations = relations(payrollItems, ({ one }) => ({
   }),
 }));
 
-export const paymentsRelations = relations(payments, ({ one }) => ({
+export const paymentsRelations = relations(payments, ({ one, many }) => ({
   student: one(students, {
     fields: [payments.studentId],
     references: [students.id],
+  }),
+  items: many(paymentItems),
+}));
+
+export const paymentItemsRelations = relations(paymentItems, ({ one }) => ({
+  payment: one(payments, {
+    fields: [paymentItems.paymentId],
+    references: [payments.id],
   }),
 }));
 
@@ -206,6 +222,10 @@ export type InsertStudent = z.infer<typeof insertStudentSchema>;
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+export type PaymentItem = typeof paymentItems.$inferSelect;
+export type PaymentFeeItemDto = { feeType: string; amount: number; currency: string };
+export type PaymentWithItems = Payment & { items: PaymentFeeItemDto[] };
 
 export type CreateStudentRequest = InsertStudent;
 export type UpdateStudentRequest = Partial<InsertStudent>;

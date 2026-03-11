@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Printer, FileDown, CheckCircle2, XCircle, Loader2, ShieldCheck } from "lucide-react";
+import { Plus, Search, Printer, FileDown, CheckCircle2, XCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { PaymentFormDialog } from "@/components/payment-form-dialog";
 import { generatePaymentReceiptPDF } from "@/lib/pdf-receipts";
 import { generateMasterPaymentPDF } from "@/lib/pdf-reports";
@@ -79,6 +79,15 @@ export default function PaymentsPage() {
   const [reportTerm, setReportTerm] = useState<string>("");
   const [reportClass, setReportClass] = useState<string>("");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (id: number) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const handleDownloadMasterReport = async () => {
     setIsGeneratingReport(true);
@@ -236,36 +245,92 @@ export default function PaymentsPage() {
                     <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">No payments found.</TableCell>
                   </TableRow>
                 ) : (
-                  filteredPayments?.sort((a, b) => new Date(b.paymentDate!).getTime() - new Date(a.paymentDate!).getTime()).map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-payment-${payment.id}`}>
-                      <TableCell>
-                        <span className="font-mono text-xs font-semibold px-2.5 py-1 bg-muted/60 rounded-lg border border-border/30">{payment.receiptNumber}</span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd, yyyy HH:mm') : ''}
-                      </TableCell>
-                      <TableCell className="font-semibold text-foreground text-sm">{payment.studentName}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{(payment as any).term || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="rounded-lg font-normal text-xs">{(payment as any).feeType || "—"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl text-sm">
-                          +{formatCurrency(payment.amount, payment.currency)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="hover:text-primary rounded-xl h-8 w-8" onClick={() => handlePrint(payment)} title="Print Receipt">
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8" title="Download PDF" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => {
-                          generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment), branding).catch(() => {});
-                        }}>
-                          <FileDown className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredPayments?.sort((a, b) => new Date(b.paymentDate!).getTime() - new Date(a.paymentDate!).getTime()).flatMap((payment) => {
+                    const paymentItems = (payment as any).items as { feeType: string; amount: number; currency: string }[] | undefined;
+                    const hasMultiple = paymentItems && paymentItems.length > 1;
+                    const isExpanded = expandedIds.has(payment.id);
+
+                    const feeLabel = hasMultiple
+                      ? `${paymentItems!.length} fees`
+                      : paymentItems?.[0]?.feeType || (payment as any).feeType || "—";
+
+                    return [
+                      <TableRow key={payment.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-payment-${payment.id}`}>
+                        <TableCell>
+                          <span className="font-mono text-xs font-semibold px-2.5 py-1 bg-muted/60 rounded-lg border border-border/30">{payment.receiptNumber}</span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd, yyyy HH:mm') : ''}
+                        </TableCell>
+                        <TableCell className="font-semibold text-foreground text-sm">{payment.studentName}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{(payment as any).term || "—"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="rounded-lg font-normal text-xs">{feeLabel}</Badge>
+                            {hasMultiple && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 rounded-md text-muted-foreground"
+                                onClick={() => toggleExpand(payment.id)}
+                                data-testid={`button-expand-${payment.id}`}
+                                title={isExpanded ? "Hide breakdown" : "Show breakdown"}
+                              >
+                                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl text-sm">
+                            +{formatCurrency(payment.amount, payment.currency)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="hover:text-primary rounded-xl h-8 w-8" onClick={() => handlePrint(payment)} title="Print Receipt">
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8" title="Download PDF" data-testid={`button-pdf-payment-${payment.id}`} onClick={() => {
+                            generatePaymentReceiptPDF(payment, buildStudentFromPayment(payment), branding).catch(() => {});
+                          }}>
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>,
+                      ...(hasMultiple && isExpanded ? [
+                        <TableRow key={`${payment.id}-breakdown`} className="bg-muted/10 hover:bg-muted/10">
+                          <TableCell colSpan={7} className="py-2 px-8">
+                            <div className="rounded-xl overflow-hidden border border-border/40 bg-background">
+                              <Table>
+                                <TableHeader className="bg-primary/5">
+                                  <TableRow className="hover:bg-transparent border-b border-border/30">
+                                    <TableHead className="py-2 text-xs font-semibold uppercase tracking-wide text-primary">Fee Type</TableHead>
+                                    <TableHead className="py-2 text-xs font-semibold uppercase tracking-wide text-primary text-right">Amount</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {paymentItems!.map((item, idx) => (
+                                    <TableRow key={idx} className="hover:bg-transparent border-b border-border/20 last:border-0">
+                                      <TableCell className="py-2 text-sm text-muted-foreground">{item.feeType}</TableCell>
+                                      <TableCell className="py-2 text-right text-sm font-semibold text-emerald-600">
+                                        +{formatCurrency(item.amount, item.currency || payment.currency)}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                  <TableRow className="hover:bg-transparent bg-emerald-50/50">
+                                    <TableCell className="py-2 text-sm font-bold text-foreground">Total Paid</TableCell>
+                                    <TableCell className="py-2 text-right text-sm font-bold text-emerald-700">
+                                      +{formatCurrency(payment.amount, payment.currency)}
+                                    </TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ] : []),
+                    ];
+                  })
                 )}
               </TableBody>
             </Table>
