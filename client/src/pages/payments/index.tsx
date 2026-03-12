@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search, Printer, FileDown, CheckCircle2, XCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { PaymentFormDialog } from "@/components/payment-form-dialog";
 import { generatePaymentReceiptPDF } from "@/lib/pdf-receipts";
-import { generateMasterPaymentPDF, generateSSCSECollectionReportPDF } from "@/lib/pdf-reports";
+import { generateSSCSECollectionReportPDF } from "@/lib/pdf-reports";
 import { ReceiptPrint } from "@/components/receipt-print";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,7 +80,6 @@ export default function PaymentsPage() {
 
   const [reportTerm, setReportTerm] = useState<string>("");
   const [reportClass, setReportClass] = useState<string>("");
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isGeneratingSSCSEReport, setIsGeneratingSSCSEReport] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
@@ -90,25 +89,6 @@ export default function PaymentsPage() {
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-  };
-
-  const handleDownloadMasterReport = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const params = new URLSearchParams();
-      const termFilter = reportTerm && reportTerm !== "all" ? reportTerm : "";
-      const classFilter = reportClass && reportClass !== "all" ? reportClass : "";
-      if (termFilter) params.set("term", termFilter);
-      if (classFilter) params.set("classGrade", classFilter);
-      const res = await fetch(`/api/payments/report?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch report data");
-      const data = await res.json();
-      generateMasterPaymentPDF(data, { term: termFilter || undefined, classGrade: classFilter || undefined }, branding);
-    } catch (err) {
-      console.error("Failed to generate report:", err);
-    } finally {
-      setIsGeneratingReport(false);
-    }
   };
 
   const handleDownloadSSCSEReport = async () => {
@@ -213,17 +193,6 @@ export default function PaymentsPage() {
                 <SelectItem value="Senior 4">Senior 4</SelectItem>
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadMasterReport}
-              disabled={isGeneratingReport}
-              className="rounded-xl"
-              data-testid="button-download-master-report"
-            >
-              {isGeneratingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-              Download Master Report
-            </Button>
             {isAdmin && (
               <Button
                 variant="outline"
