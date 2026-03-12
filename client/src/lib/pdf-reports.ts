@@ -798,3 +798,77 @@ export function generateDetailedBudgetReportPDF(
     `budget-report-${meta.term.replace(/\s/g, "-")}-${meta.academicYear.replace("/", "-")}-${new Date().toISOString().split("T")[0]}.pdf`
   );
 }
+
+export interface SSCSEPaymentRow {
+  studentName: string;
+  studentAdmissionNumber: string;
+  studentClassGrade: string;
+  receiptNumber: string;
+  paymentDate: string;
+  amount: number;
+  term: string;
+  recordedBy?: string | null;
+}
+
+export function generateSSCSECollectionReportPDF(
+  payments: SSCSEPaymentRow[],
+  branding?: BrandingParam
+): void {
+  const doc = new jsPDF();
+  let y = addHeader(doc, "SSCSE Fee Collection Report", "Senior 4 Examination Fees — USD Collections", branding);
+
+  y = tableHeader(doc, y, [
+    { label: "#", x: 19 },
+    { label: "Student Name", x: 28 },
+    { label: "Adm No.", x: 100 },
+    { label: "Receipt No.", x: 130 },
+    { label: "Term", x: 163 },
+    { label: "Date", x: 181, align: "right" },
+    { label: "Amount (USD)", x: 195, align: "right" },
+  ]);
+
+  let totalUSD = 0;
+
+  payments.forEach((row, i) => {
+    if (y > 260) { doc.addPage(); y = 20; }
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 3, 180, 8, "F");
+
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+    doc.text(String(i + 1), 19, y + 2);
+    doc.text(row.studentName.substring(0, 30), 28, y + 2);
+    doc.text(row.studentAdmissionNumber, 100, y + 2);
+    doc.text(row.receiptNumber, 130, y + 2);
+    doc.text(row.term || "N/A", 163, y + 2);
+    const dateStr = row.paymentDate ? new Date(row.paymentDate).toLocaleDateString("en-GB") : "N/A";
+    doc.text(dateStr, 195, y + 2, { align: "right" });
+    doc.setFont("helvetica", "bold");
+    doc.text(fmt(row.amount, "USD"), 195, y + 2, { align: "right" });
+    totalUSD += row.amount;
+    y += 8;
+  });
+
+  // Total footer
+  y += 4;
+  doc.setFillColor(...PRIMARY_GREEN);
+  doc.rect(15, y, 180, 12, "F");
+  doc.setFontSize(9.5); doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
+  doc.text("TOTAL SSCSE COLLECTED", 19, y + 8);
+  doc.text(fmt(totalUSD, "USD"), 195, y + 8, { align: "right" });
+  y += 18;
+
+  // Info note
+  if (y > 250) { doc.addPage(); y = 20; }
+  doc.setFillColor(...PALE_MINT);
+  doc.roundedRect(15, y, 180, 18, 3, 3, "F");
+  doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(60, 80, 70);
+  doc.text(
+    "Note: SSCSE fees are collected in USD as pass-through funds for examination bodies and are",
+    22, y + 7
+  );
+  doc.text("excluded from net school profit calculations.", 22, y + 14);
+
+  addFooter(doc, branding);
+  doc.save(`sscse-collection-report-${new Date().toISOString().split("T")[0]}.pdf`);
+}

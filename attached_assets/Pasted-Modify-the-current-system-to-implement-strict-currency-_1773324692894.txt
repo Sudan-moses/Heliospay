@@ -1,0 +1,20 @@
+Modify the current system to implement strict currency separation for SSCSE fees, automate academic periods, and enhance administrative oversight:
+​1. S4 SSCSE Fee: USD Currency & Profit Exclusion
+​Currency Logic: Create a separate field or logic for SSCSE Fees that only accepts USD. This must be independent of the local currency used for Tuition.
+​Profit Logic: Exclude all SSCSE fee collections from the "Net Profit" calculation. These funds must be treated as a "Pass-through" or "Escrow" account for examination bodies.
+​Reporting: Create a dedicated SSCSE USD Collection Report (PDF). It must display the total USD collected, student names (S4 only), and dates, using the Forest Minimalist branding (#1B4332).
+​2. Transaction Attribution ("Recorded By")
+​Audit Trail: Every payment record (Tuition, SSCSE, etc.) must automatically capture the user_role and username of the person logged in.
+​Display: On receipts and payment logs, include a "Recorded By:" field that reflects the account type (e.g., Recorded By: Bursar - John or Recorded By: Admin - Sarah).
+​3. Fixing Multi-Fee Record Errors
+​The Fix: Remove any database constraints that prevent multiple rows for the same student_id in the payments table.
+​Separate Logic: Ensure that recording a Tuition fee does not "lock" the student record. The system must allow a second, independent transaction for the SSCSE fee for S4 students.
+​4. Admin Payroll & User Management
+​Payroll Control: Add a "Delete" button in the Payroll History section. This button must be visible only to the Admin to allow for the removal of incorrectly generated payrolls.
+​User Management: In the User Management dashboard, add a Delete User button next to each account.
+​Security: Ensure the Admin cannot delete their own account to prevent a system lockout.
+​5. Automated Academic Periods
+​Dynamic Dates: In the Shareholders and Budget vs. Actual modules, replace manual year entry with an automated system.
+​Logic: Fetch the current Academic Year from the system clock or a "Global Settings" variable so that reports always default to the active year (e.g., 2026) without manual input.
+​6. UI Alignment & Branding
+​Non-Overlapping Headers: Ensure the School Logo (Left) and School Info (Center) are placed in a header container with defined widths to prevent text overlapping on any PDF reports or receipts.

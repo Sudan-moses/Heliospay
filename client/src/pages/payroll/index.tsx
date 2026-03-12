@@ -118,7 +118,7 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
           )}
 
           <div className="flex flex-row flex-wrap items-center gap-2">
-            {payroll.status === "Draft" && isAdmin && (
+            {isAdmin && (
               <>
                 <Button
                   onClick={() => approveMutation.mutate(payroll.id)}
@@ -141,13 +141,14 @@ function PayrollCard({ payroll, isAdmin, branding }: { payroll: Payroll; isAdmin
                 </Button>
               </>
             )}
-            {payroll.status === "Draft" && (
+            {isAdmin && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="hover:text-red-600 rounded-xl h-8 w-8"
                 onClick={() => deleteMutation.mutate(payroll.id)}
                 disabled={deleteMutation.isPending}
+                title="Delete payroll"
                 data-testid={`button-delete-payroll-${payroll.id}`}
               >
                 <Trash2 className="h-4 w-4" />

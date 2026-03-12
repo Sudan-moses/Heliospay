@@ -39,7 +39,8 @@ export default function ShareholdersPage() {
   const isAdmin = (user as any)?.role === "Admin";
 
   const [term, setTerm] = useState("Term 1");
-  const [academicYear, setAcademicYear] = useState("2023/2024");
+  const currentYear = new Date().getFullYear();
+  const [academicYear, setAcademicYear] = useState(`${currentYear}/${currentYear + 1}`);
   const [currency, setCurrency] = useState("UGX");
   const [calcResult, setCalcResult] = useState<null | {
     netProfit: number;

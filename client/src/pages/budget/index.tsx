@@ -43,7 +43,8 @@ export default function BudgetPage() {
   const canEdit = (user as any)?.role !== "Principal";
 
   const [term, setTerm] = useState("Term 1");
-  const [academicYear, setAcademicYear] = useState("2023/2024");
+  const currentYear = new Date().getFullYear();
+  const [academicYear, setAcademicYear] = useState(`${currentYear}/${currentYear + 1}`);
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 

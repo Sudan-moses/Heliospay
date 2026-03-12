@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useCreatePayment } from "@/hooks/use-payments";
 import { useStudents } from "@/hooks/use-students";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus, X, Info } from "lucide-react";
 
 const BASE_FEE_TYPES = ["Tuition Fee", "Admission Fee", "Boarding Fee", "Transport Fee", "Lab Fee"];
 const TERMS = ["Term 1", "Term 2", "Term 3"];
@@ -47,9 +47,14 @@ export function PaymentFormDialog({
   const { user } = useAuth();
   const isPending = createMutation.isPending;
 
+  const userRole = (user as any)?.role || "Staff";
+  const userName = (user as any)?.firstName || (user as any)?.email?.split("@")[0] || "Unknown";
+  const recordedByLabel = `${userRole} - ${userName}`;
+
   const [feeItems, setFeeItems] = useState<FeeItem[]>([{ feeType: "", amount: 0 }]);
 
   const totalAmount = feeItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const hasSSCSE = feeItems.some(i => i.feeType === "SSCSE Fee");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -60,7 +65,7 @@ export function PaymentFormDialog({
       term: "",
       feeType: "",
       receiptNumber: `REC-${Date.now()}`,
-      recordedBy: user?.email || "Unknown",
+      recordedBy: recordedByLabel,
       notes: "",
     },
   });
@@ -70,7 +75,10 @@ export function PaymentFormDialog({
     const computedFeeType = feeItems.length > 1 && feeItems.filter(i => i.feeType).length > 1 ? "Multiple" : firstFeeType;
     form.setValue("amount", totalAmount);
     form.setValue("feeType", computedFeeType || "");
-  }, [feeItems, totalAmount, form]);
+    if (hasSSCSE) {
+      form.setValue("currency", "USD");
+    }
+  }, [feeItems, totalAmount, form, hasSSCSE]);
 
   const selectedStudentId = form.watch("studentId");
   const selectedStudent = students?.find(s => s.id === Number(selectedStudentId));
@@ -86,6 +94,10 @@ export function PaymentFormDialog({
   };
 
   const updateFeeItem = (index: number, field: keyof FeeItem, value: string | number) => {
+    if (field === "feeType" && value === "SSCSE Fee") {
+      setFeeItems([{ feeType: "SSCSE Fee", amount: feeItems[index]?.amount || 0 }]);
+      return;
+    }
     setFeeItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
       return { ...item, [field]: value };
@@ -94,7 +106,7 @@ export function PaymentFormDialog({
 
   const onSubmit = (data: FormValues) => {
     const feeBreakdown = JSON.stringify(feeItems.filter(i => i.feeType && i.amount > 0));
-    createMutation.mutate({ ...data, feeBreakdown }, {
+    createMutation.mutate({ ...data, feeBreakdown, recordedBy: recordedByLabel }, {
       onSuccess: () => {
         form.reset();
         setFeeItems([{ feeType: "", amount: 0 }]);
@@ -146,7 +158,7 @@ export function PaymentFormDialog({
                       onValueChange={(val) => {
                         field.onChange(val);
                         const student = students?.find(s => s.id === Number(val));
-                        if (student) {
+                        if (student && !hasSSCSE) {
                           form.setValue('currency', student.currency);
                         }
                       }}
@@ -202,17 +214,26 @@ export function PaymentFormDialog({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <FormLabel>Fee Items</FormLabel>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addFeeItem}
-                    data-testid="button-add-fee-item"
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add Fee
-                  </Button>
+                  {!hasSSCSE && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addFeeItem}
+                      data-testid="button-add-fee-item"
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add Fee
+                    </Button>
+                  )}
                 </div>
+
+                {hasSSCSE && (
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>SSCSE fees are collected in <strong>USD</strong> as a pass-through for examination bodies. This must be a separate transaction.</span>
+                  </div>
+                )}
 
                 {feeItems.map((item, index) => (
                   <div key={index} className="flex items-start gap-2" data-testid={`fee-item-row-${index}`}>
@@ -271,8 +292,11 @@ export function PaymentFormDialog({
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Currency</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>
+                      Currency
+                      {hasSSCSE && <span className="ml-2 text-xs text-blue-600 font-normal">(locked to USD for SSCSE)</span>}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={hasSSCSE}>
                       <FormControl>
                         <SelectTrigger className="h-11" data-testid="select-currency">
                           <SelectValue placeholder="Select currency" />
@@ -301,6 +325,10 @@ export function PaymentFormDialog({
                   </FormItem>
                 )}
               />
+
+              <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                Recorded by: <span className="font-semibold text-foreground">{recordedByLabel}</span>
+              </div>
 
               <FormField
                 control={form.control}

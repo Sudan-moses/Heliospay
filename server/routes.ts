@@ -385,6 +385,21 @@ export async function registerRoutes(
     res.json(user);
   });
 
+  app.delete('/api/users/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    const targetId = req.params.id as string;
+    const currentUserId = req.user?.claims?.sub;
+    if (targetId === currentUserId) {
+      return res.status(400).json({ message: "You cannot delete your own account." });
+    }
+    await authStorage.deleteUser(targetId);
+    res.json({ success: true });
+  });
+
+  app.get('/api/payments/sscse', isAuthenticated, isAdmin, async (_req, res) => {
+    const sscsePayments = await storage.getSSCSEPayments();
+    res.json(sscsePayments);
+  });
+
   // Budget routes
   app.use('/api/budgets', isAuthenticated, blockInactive);
 

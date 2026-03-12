@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search, Printer, FileDown, CheckCircle2, XCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { PaymentFormDialog } from "@/components/payment-form-dialog";
 import { generatePaymentReceiptPDF } from "@/lib/pdf-receipts";
-import { generateMasterPaymentPDF } from "@/lib/pdf-reports";
+import { generateMasterPaymentPDF, generateSSCSECollectionReportPDF } from "@/lib/pdf-reports";
 import { ReceiptPrint } from "@/components/receipt-print";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -65,7 +65,9 @@ export default function PaymentsPage() {
   const { data: payments, isLoading } = usePayments();
   const { data: branding } = useBranding();
   const { user } = useAuth();
-  const canEdit = (user as any)?.role !== "Principal";
+  const userRole = (user as any)?.role;
+  const canEdit = userRole !== "Principal";
+  const isAdmin = userRole === "Admin";
   const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
   
@@ -79,6 +81,7 @@ export default function PaymentsPage() {
   const [reportTerm, setReportTerm] = useState<string>("");
   const [reportClass, setReportClass] = useState<string>("");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isGeneratingSSCSEReport, setIsGeneratingSSCSEReport] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   const toggleExpand = (id: number) => {
@@ -105,6 +108,20 @@ export default function PaymentsPage() {
       console.error("Failed to generate report:", err);
     } finally {
       setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadSSCSEReport = async () => {
+    setIsGeneratingSSCSEReport(true);
+    try {
+      const res = await fetch("/api/payments/sscse");
+      if (!res.ok) throw new Error("Failed to fetch SSCSE data");
+      const data = await res.json();
+      generateSSCSECollectionReportPDF(data, branding);
+    } catch (err) {
+      console.error("Failed to generate SSCSE report:", err);
+    } finally {
+      setIsGeneratingSSCSEReport(false);
     }
   };
 
@@ -207,6 +224,19 @@ export default function PaymentsPage() {
               {isGeneratingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
               Download Master Report
             </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadSSCSEReport}
+                disabled={isGeneratingSSCSEReport}
+                className="rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50"
+                data-testid="button-download-sscse-report"
+              >
+                {isGeneratingSSCSEReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                SSCSE Collection Report
+              </Button>
+            )}
           </div>
 
           <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">

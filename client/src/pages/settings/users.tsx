@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Shield, AlertCircle } from "lucide-react";
+import { Users, Shield, AlertCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -39,6 +39,20 @@ export default function UsersManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({ title: "Role updated", description: "User role has been updated successfully." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/users/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "User deleted", description: "The user account has been removed." });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -153,66 +167,88 @@ export default function UsersManagement() {
               <TableHead className="font-semibold text-foreground">Role</TableHead>
               <TableHead className="font-semibold text-foreground">Joined</TableHead>
               <TableHead className="w-[180px] font-semibold text-foreground">Change Role</TableHead>
+              <TableHead className="w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                   No users found.
                 </TableCell>
               </TableRow>
             ) : (
-              users?.map((u) => (
-                <TableRow key={u.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-user-${u.id}`}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={u.profileImageUrl || undefined} />
-                        <AvatarFallback className="text-xs font-bold">
-                          {u.firstName?.[0] || u.email?.[0] || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium text-foreground" data-testid={`text-user-name-${u.id}`}>
-                        {u.firstName || "Unknown"} {u.lastName || ""}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground" data-testid={`text-user-email-${u.id}`}>
-                    {u.email || "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={roleBadgeStyles[u.role] || ""}
-                      data-testid={`badge-user-role-${u.id}`}
-                    >
-                      {u.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {u.createdAt ? format(new Date(u.createdAt), "MMM dd, yyyy") : "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={u.role}
-                      onValueChange={(role) => updateRoleMutation.mutate({ id: u.id, role })}
-                      disabled={u.id === currentUser?.id || updateRoleMutation.isPending}
-                    >
-                      <SelectTrigger data-testid={`select-user-role-${u.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Bursar">Bursar</SelectItem>
-                        <SelectItem value="Principal">Principal</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Suspended">Suspended</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))
+              users?.map((u) => {
+                const isSelf = u.id === currentUser?.id;
+                return (
+                  <TableRow key={u.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-user-${u.id}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={u.profileImageUrl || undefined} />
+                          <AvatarFallback className="text-xs font-bold">
+                            {u.firstName?.[0] || u.email?.[0] || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-foreground" data-testid={`text-user-name-${u.id}`}>
+                          {u.firstName || "Unknown"} {u.lastName || ""}
+                          {isSelf && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground" data-testid={`text-user-email-${u.id}`}>
+                      {u.email || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={roleBadgeStyles[u.role] || ""}
+                        data-testid={`badge-user-role-${u.id}`}
+                      >
+                        {u.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {u.createdAt ? format(new Date(u.createdAt), "MMM dd, yyyy") : "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={u.role}
+                        onValueChange={(role) => updateRoleMutation.mutate({ id: u.id, role })}
+                        disabled={isSelf || updateRoleMutation.isPending}
+                      >
+                        <SelectTrigger data-testid={`select-user-role-${u.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Admin">Admin</SelectItem>
+                          <SelectItem value="Bursar">Bursar</SelectItem>
+                          <SelectItem value="Principal">Principal</SelectItem>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Suspended">Suspended</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg"
+                        disabled={isSelf || deleteUserMutation.isPending}
+                        onClick={() => {
+                          if (confirm(`Delete user ${u.firstName || u.email}? This cannot be undone.`)) {
+                            deleteUserMutation.mutate(u.id);
+                          }
+                        }}
+                        title={isSelf ? "Cannot delete your own account" : "Delete user"}
+                        data-testid={`button-delete-user-${u.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

@@ -79,6 +79,8 @@ export interface IStorage {
 
   getNonTeachingStaffMember(id: number): Promise<NonTeachingStaff | undefined>;
 
+  getSSCSEPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string })[]>;
+
   getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; items: PaymentFeeItemDto[] }) | undefined>;
 
   getPaymentsFiltered(term?: string, classGrade?: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; items: PaymentFeeItemDto[] })[]>;
@@ -407,6 +409,20 @@ export class DatabaseStorage implements IStorage {
     return staff;
   }
 
+  async getSSCSEPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string })[]> {
+    const allPayments = await db.select().from(payments).where(eq(payments.feeType, "SSCSE Fee")).orderBy(desc(payments.paymentDate));
+    const allStudents = await db.select().from(students);
+    return allPayments.map(payment => {
+      const student = allStudents.find(s => s.id === payment.studentId);
+      return {
+        ...payment,
+        studentName: student?.fullName || "Unknown",
+        studentAdmissionNumber: student?.admissionNumber || "N/A",
+        studentClassGrade: student?.classGrade || "N/A",
+      };
+    });
+  }
+
   async getPaymentByReceiptNumber(receiptNumber: string): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; items: PaymentFeeItemDto[] }) | undefined> {
     const [payment] = await db.select().from(payments).where(eq(payments.receiptNumber, receiptNumber));
     if (!payment) return undefined;
@@ -512,6 +528,7 @@ export class DatabaseStorage implements IStorage {
     const totalExpenses = { UGX: 0, USD: 0 };
 
     allPayments.forEach(p => {
+      if (p.feeType === "SSCSE Fee") return; // SSCSE is pass-through escrow, excluded from net profit
       if (p.currency === "USD") totalIncome.USD += p.amount;
       else totalIncome.UGX += p.amount;
     });
