@@ -872,3 +872,292 @@ export function generateSSCSECollectionReportPDF(
   addFooter(doc, branding);
   doc.save(`sscse-collection-report-${new Date().toISOString().split("T")[0]}.pdf`);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Master Transaction Log PDF (for Reports Dashboard)
+// ─────────────────────────────────────────────────────────────────────────────
+export interface TransactionLogRow {
+  studentName: string;
+  studentClassGrade: string;
+  paymentDate: string;
+  feeType: string;
+  amount: number;
+  currency: string;
+  term: string;
+  recordedBy?: string | null;
+  receiptNumber: string;
+}
+
+export function generateMasterTransactionLogPDF(
+  rows: TransactionLogRow[],
+  branding?: BrandingParam
+): void {
+  const doc = new jsPDF({ orientation: "landscape" });
+  const PAGE_W = 297;
+
+  let y = addHeaderLandscape(
+    doc,
+    "Master Transaction Log",
+    `All Payments · ${new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long" })}`,
+    branding
+  );
+
+  // Group rows by fee type
+  const groups: Record<string, TransactionLogRow[]> = {};
+  rows.forEach(r => {
+    const key = r.feeType || "Uncategorized";
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+
+  const grandTotals: Record<string, number> = {};
+
+  for (const [feeType, items] of Object.entries(groups)) {
+    // Section heading
+    if (y > 170) { doc.addPage(); y = 20; }
+    y = sectionTitle(doc, feeType, y);
+    y = divider(doc, y + 4);
+
+    // Table header
+    const cols = [
+      { label: "Date", x: 15 },
+      { label: "Student Name", x: 42 },
+      { label: "Class", x: 105 },
+      { label: "Term", x: 133 },
+      { label: "Recorded By", x: 158 },
+      { label: "Receipt #", x: 210 },
+      { label: "Amount", x: PAGE_W - 15, align: "right" as const },
+    ];
+    y = tableHeader(doc, y, cols, PAGE_W);
+
+    let subtotal = 0;
+    const currency = items[0]?.currency || "UGX";
+
+    items.forEach((r, i) => {
+      if (y > 185) { doc.addPage(); y = 20; }
+      const even = i % 2 === 0;
+      doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+      doc.rect(15, y - 4, PAGE_W - 30, 8, "F");
+
+      doc.setFontSize(7.5); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+      const dateStr = r.paymentDate ? new Date(r.paymentDate).toLocaleDateString("en-GB") : "N/A";
+      doc.text(dateStr, 15, y + 1);
+      doc.text((r.studentName || "").substring(0, 28), 42, y + 1);
+      doc.text((r.studentClassGrade || "").substring(0, 12), 105, y + 1);
+      doc.text(r.term || "N/A", 133, y + 1);
+      const recordedBy = (r.recordedBy || "N/A").substring(0, 20);
+      doc.text(recordedBy, 158, y + 1);
+      doc.text((r.receiptNumber || "").substring(0, 18), 210, y + 1);
+      doc.setFont("helvetica", "bold");
+      doc.text(fmt(r.amount, r.currency), PAGE_W - 15, y + 1, { align: "right" });
+
+      subtotal += r.amount;
+      grandTotals[currency] = (grandTotals[currency] || 0) + r.amount;
+      y += 8;
+    });
+
+    // Subtotal row
+    y += 2;
+    doc.setFillColor(...PALE_MINT);
+    doc.rect(15, y, PAGE_W - 30, 10, "F");
+    doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN as [number, number, number]);
+    doc.text(`${feeType} Subtotal`, 18, y + 7);
+    doc.text(fmt(subtotal, currency), PAGE_W - 15, y + 7, { align: "right" });
+    y += 16;
+  }
+
+  // Grand total footer
+  if (y > 170) { doc.addPage(); y = 20; }
+  y += 4;
+  doc.setFillColor(...PRIMARY_GREEN as [number, number, number]);
+  doc.rect(15, y, PAGE_W - 30, 14, "F");
+  doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
+  doc.text("GRAND TOTAL", 20, y + 10);
+
+  let xOffset = PAGE_W - 15;
+  const currencies = Object.keys(grandTotals).sort();
+  currencies.reverse().forEach(cur => {
+    doc.text(`${cur} ${fmt(grandTotals[cur], cur)}`, xOffset, y + 10, { align: "right" });
+    xOffset -= 60;
+  });
+
+  y += 20;
+  if (grandTotals["USD"] && grandTotals["UGX"]) {
+    if (y > 180) { doc.addPage(); y = 20; }
+    doc.setFillColor(...PALE_MINT as [number, number, number]);
+    doc.roundedRect(15, y, PAGE_W - 30, 14, 3, 3, "F");
+    doc.setFontSize(7.5); doc.setFont("helvetica", "normal"); doc.setTextColor(60, 80, 70);
+    doc.text("Note: SSCSE fees (USD) are pass-through exam body funds and are excluded from net school profit.", 20, y + 9);
+  }
+
+  addFooter(doc, branding);
+  doc.save(`master-transaction-log-${new Date().toISOString().split("T")[0]}.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Teaching Staff Report PDF
+// ─────────────────────────────────────────────────────────────────────────────
+export interface TeacherReportRow {
+  fullName: string;
+  subjects: string[];
+  phoneNumber: string;
+  email?: string | null;
+  baseSalary: number;
+  accommodationAllowance: number;
+  transportAllowance: number;
+  otherAllowances: number;
+  deductions: number;
+  currency: string;
+  status: string;
+}
+
+export function generateTeachingStaffPDF(
+  teachers: TeacherReportRow[],
+  branding?: BrandingParam
+): void {
+  const doc = new jsPDF({ orientation: "landscape" });
+  const PAGE_W = 297;
+
+  let y = addHeaderLandscape(doc, "Teaching Staff Report", `${teachers.length} Staff Member(s)`, branding);
+
+  const cols = [
+    { label: "#", x: 15 },
+    { label: "Full Name", x: 23 },
+    { label: "Subjects", x: 80 },
+    { label: "Phone", x: 148 },
+    { label: "Email", x: 182 },
+    { label: "Net Salary", x: PAGE_W - 30, align: "right" as const },
+    { label: "Status", x: PAGE_W - 15, align: "right" as const },
+  ];
+
+  y = tableHeader(doc, y, cols, PAGE_W);
+
+  teachers.forEach((t, i) => {
+    if (y > 185) { doc.addPage(); y = 20; }
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 4, PAGE_W - 30, 9, "F");
+
+    const net = t.baseSalary + t.accommodationAllowance + t.transportAllowance + t.otherAllowances - t.deductions;
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+    doc.text(String(i + 1), 15, y + 2);
+    doc.text(t.fullName.substring(0, 24), 23, y + 2);
+    doc.text((t.subjects || []).join(", ").substring(0, 30), 80, y + 2);
+    doc.text(t.phoneNumber || "N/A", 148, y + 2);
+    doc.text((t.email || "N/A").substring(0, 24), 182, y + 2);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PRIMARY_GREEN as [number, number, number]);
+    doc.text(fmt(net, t.currency), PAGE_W - 30, y + 2, { align: "right" });
+
+    const statusColor: [number, number, number] = t.status === "Active" ? [22, 101, 52] : [100, 100, 100];
+    doc.setTextColor(...statusColor);
+    doc.setFont("helvetica", "normal");
+    doc.text(t.status, PAGE_W - 15, y + 2, { align: "right" });
+
+    y += 9;
+  });
+
+  // Totals by currency
+  const totals: Record<string, number> = {};
+  teachers.filter(t => t.status === "Active").forEach(t => {
+    const net = t.baseSalary + t.accommodationAllowance + t.transportAllowance + t.otherAllowances - t.deductions;
+    totals[t.currency] = (totals[t.currency] || 0) + net;
+  });
+
+  y += 6;
+  if (y > 175) { doc.addPage(); y = 20; }
+  y = sectionTitle(doc, "Total Monthly Payroll (Active Staff)", y);
+  y = divider(doc, y + 4);
+
+  Object.entries(totals).forEach(([cur, total]) => {
+    doc.setFillColor(...PALE_MINT as [number, number, number]);
+    doc.roundedRect(15, y, PAGE_W - 30, 12, 3, 3, "F");
+    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN as [number, number, number]);
+    doc.text(`${cur} Total:`, 22, y + 8);
+    doc.text(fmt(total, cur), PAGE_W - 15, y + 8, { align: "right" });
+    y += 18;
+  });
+
+  addFooter(doc, branding);
+  doc.save(`teaching-staff-report-${new Date().toISOString().split("T")[0]}.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Non-Teaching Staff Report PDF
+// ─────────────────────────────────────────────────────────────────────────────
+export interface NonTeachingStaffReportRow {
+  fullName: string;
+  position: string;
+  phoneNumber: string;
+  email?: string | null;
+  baseSalary: number;
+  currency: string;
+  contractType: string;
+  status: string;
+}
+
+export function generateNonTeachingStaffPDF(
+  staff: NonTeachingStaffReportRow[],
+  branding?: BrandingParam
+): void {
+  const doc = new jsPDF({ orientation: "landscape" });
+  const PAGE_W = 297;
+
+  let y = addHeaderLandscape(doc, "Non-Teaching Staff Report", `${staff.length} Staff Member(s)`, branding);
+
+  const cols = [
+    { label: "#", x: 15 },
+    { label: "Full Name", x: 23 },
+    { label: "Position", x: 80 },
+    { label: "Contract", x: 140 },
+    { label: "Phone", x: 170 },
+    { label: "Email", x: 200 },
+    { label: "Salary", x: PAGE_W - 15, align: "right" as const },
+  ];
+
+  y = tableHeader(doc, y, cols, PAGE_W);
+
+  staff.forEach((s, i) => {
+    if (y > 185) { doc.addPage(); y = 20; }
+    const even = i % 2 === 0;
+    doc.setFillColor(even ? 245 : 255, even ? 250 : 255, even ? 247 : 255);
+    doc.rect(15, y - 4, PAGE_W - 30, 9, "F");
+
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
+    doc.text(String(i + 1), 15, y + 2);
+    doc.text(s.fullName.substring(0, 24), 23, y + 2);
+    doc.text((s.position || "N/A").substring(0, 24), 80, y + 2);
+    doc.text(s.contractType || "N/A", 140, y + 2);
+    doc.text(s.phoneNumber || "N/A", 170, y + 2);
+    doc.text((s.email || "N/A").substring(0, 20), 200, y + 2);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PRIMARY_GREEN as [number, number, number]);
+    doc.text(fmt(s.baseSalary, s.currency), PAGE_W - 15, y + 2, { align: "right" });
+    y += 9;
+  });
+
+  // Totals
+  const totals: Record<string, number> = {};
+  staff.filter(s => s.status === "Active").forEach(s => {
+    totals[s.currency] = (totals[s.currency] || 0) + s.baseSalary;
+  });
+
+  y += 6;
+  if (y > 175) { doc.addPage(); y = 20; }
+  y = sectionTitle(doc, "Total Monthly Payroll (Active Staff)", y);
+  y = divider(doc, y + 4);
+
+  Object.entries(totals).forEach(([cur, total]) => {
+    doc.setFillColor(...PALE_MINT as [number, number, number]);
+    doc.roundedRect(15, y, PAGE_W - 30, 12, 3, 3, "F");
+    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY_GREEN as [number, number, number]);
+    doc.text(`${cur} Total:`, 22, y + 8);
+    doc.text(fmt(total, cur), PAGE_W - 15, y + 8, { align: "right" });
+    y += 18;
+  });
+
+  addFooter(doc, branding);
+  doc.save(`non-teaching-staff-report-${new Date().toISOString().split("T")[0]}.pdf`);
+}

@@ -6,14 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { Download, TrendingUp, TrendingDown, DollarSign, FileText, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useBranding } from "@/hooks/use-branding";
-import { generateFinancialReportPDF, type FinancialSummary } from "@/lib/pdf-reports";
+import { generateFinancialReportPDF, generateMasterTransactionLogPDF, type FinancialSummary, type TransactionLogRow } from "@/lib/pdf-reports";
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState("monthly");
   const [term, setTerm] = useState<string | undefined>(undefined);
+  const [isGeneratingTransactionLog, setIsGeneratingTransactionLog] = useState(false);
   const { data: branding } = useBranding();
 
   const queryParams = new URLSearchParams({ period });
@@ -29,6 +30,53 @@ export default function ReportsPage() {
     generateFinancialReportPDF(data, branding);
   };
 
+  const handleDownloadTransactionLog = async () => {
+    setIsGeneratingTransactionLog(true);
+    try {
+      const res = await fetch("/api/payments/report");
+      if (!res.ok) throw new Error("Failed to fetch payment data");
+      const data: any[] = await res.json();
+
+      // Expand multi-fee payments into individual fee-type rows for granular grouping
+      const rows: TransactionLogRow[] = [];
+      data.forEach((p: any) => {
+        if (p.items && p.items.length > 1) {
+          p.items.forEach((item: any) => {
+            rows.push({
+              studentName: p.studentName,
+              studentClassGrade: p.studentClassGrade,
+              paymentDate: p.paymentDate,
+              feeType: item.feeType,
+              amount: item.amount,
+              currency: item.currency || p.currency,
+              term: p.term,
+              recordedBy: p.recordedBy,
+              receiptNumber: p.receiptNumber,
+            });
+          });
+        } else {
+          rows.push({
+            studentName: p.studentName,
+            studentClassGrade: p.studentClassGrade,
+            paymentDate: p.paymentDate,
+            feeType: p.feeType || "Uncategorized",
+            amount: p.amount,
+            currency: p.currency,
+            term: p.term,
+            recordedBy: p.recordedBy,
+            receiptNumber: p.receiptNumber,
+          });
+        }
+      });
+
+      generateMasterTransactionLogPDF(rows, branding);
+    } catch (err) {
+      console.error("Failed to generate transaction log:", err);
+    } finally {
+      setIsGeneratingTransactionLog(false);
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="reports-page">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -36,10 +84,24 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold" data-testid="text-reports-title">Financial Reports</h1>
           <p className="text-sm text-muted-foreground">View and download financial summaries</p>
         </div>
-        <Button onClick={handleDownloadPDF} disabled={!data || isLoading} data-testid="button-download-pdf">
-          <Download className="mr-2 h-4 w-4" />
-          Download PDF
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={handleDownloadTransactionLog}
+            disabled={isGeneratingTransactionLog}
+            data-testid="button-download-transaction-log"
+            className="rounded-xl"
+          >
+            {isGeneratingTransactionLog
+              ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              : <FileText className="mr-2 h-4 w-4" />}
+            Master Transaction Log
+          </Button>
+          <Button onClick={handleDownloadPDF} disabled={!data || isLoading} data-testid="button-download-pdf" className="rounded-xl">
+            <Download className="mr-2 h-4 w-4" />
+            Financial Summary PDF
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-4">

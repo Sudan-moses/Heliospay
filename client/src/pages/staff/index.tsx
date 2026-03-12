@@ -2,20 +2,22 @@ import { useState } from "react";
 import { useTeachers, useDeleteTeacher } from "@/hooks/use-teachers";
 import { useNonTeachingStaff, useDeleteNonTeachingStaff } from "@/hooks/use-non-teaching-staff";
 import { useAuth } from "@/hooks/use-auth";
+import { useBranding } from "@/hooks/use-branding";
 import { formatCurrency } from "@/lib/utils";
 import { type Teacher, type NonTeachingStaff } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Pencil, Trash2, Info, Eye } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Info, Eye, FileDown } from "lucide-react";
 import { Link } from "wouter";
 import { TeacherFormDialog } from "@/components/teacher-form-dialog";
 import { NonTeachingStaffFormDialog } from "@/components/non-teaching-staff-form-dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { generateTeachingStaffPDF, generateNonTeachingStaffPDF } from "@/lib/pdf-reports";
 
-function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
+function TeachingStaffTab({ canEdit, branding }: { canEdit: boolean; branding?: any }) {
   const { data: teachers, isLoading } = useTeachers();
   const deleteMutation = useDeleteTeacher();
   const [formOpen, setFormOpen] = useState(false);
@@ -36,6 +38,11 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
     if (!open) setEditingTeacher(null);
   };
 
+  const handleExportPDF = () => {
+    if (!teachers || teachers.length === 0) return;
+    generateTeachingStaffPDF(teachers, branding);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -49,11 +56,24 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
             data-testid="input-search-teachers"
           />
         </div>
-        {canEdit && (
-          <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold shadow-sm" data-testid="button-add-teacher">
-            <Plus className="mr-2 h-5 w-5" /> Add Teacher
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPDF}
+            disabled={!teachers || teachers.length === 0}
+            className="rounded-xl"
+            data-testid="button-export-teaching-staff-pdf"
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export PDF
           </Button>
-        )}
+          {canEdit && (
+            <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold shadow-sm" data-testid="button-add-teacher">
+              <Plus className="mr-2 h-5 w-5" /> Add Teacher
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
@@ -196,7 +216,7 @@ function TeachingStaffTab({ canEdit }: { canEdit: boolean }) {
   );
 }
 
-function NonTeachingStaffTab({ canEdit }: { canEdit: boolean }) {
+function NonTeachingStaffTab({ canEdit, branding }: { canEdit: boolean; branding?: any }) {
   const { data: staffList, isLoading } = useNonTeachingStaff();
   const deleteMutation = useDeleteNonTeachingStaff();
   const [formOpen, setFormOpen] = useState(false);
@@ -219,6 +239,11 @@ function NonTeachingStaffTab({ canEdit }: { canEdit: boolean }) {
     if (!open) setEditingStaff(null);
   };
 
+  const handleExportPDF = () => {
+    if (!staffList || staffList.length === 0) return;
+    generateNonTeachingStaffPDF(staffList, branding);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -232,11 +257,24 @@ function NonTeachingStaffTab({ canEdit }: { canEdit: boolean }) {
             data-testid="input-search-nts"
           />
         </div>
-        {canEdit && (
-          <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold shadow-sm" data-testid="button-add-nts">
-            <Plus className="mr-2 h-5 w-5" /> Add Staff
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPDF}
+            disabled={!staffList || staffList.length === 0}
+            className="rounded-xl"
+            data-testid="button-export-nts-pdf"
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export PDF
           </Button>
-        )}
+          {canEdit && (
+            <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold shadow-sm" data-testid="button-add-nts">
+              <Plus className="mr-2 h-5 w-5" /> Add Staff
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="shadow-sm rounded-2xl border-border/40 overflow-hidden">
@@ -327,6 +365,7 @@ function NonTeachingStaffTab({ canEdit }: { canEdit: boolean }) {
 
 export default function StaffPage() {
   const { user } = useAuth();
+  const { data: branding } = useBranding();
   const canEdit = (user as any)?.role !== "Principal";
 
   return (
@@ -342,10 +381,10 @@ export default function StaffPage() {
           <TabsTrigger value="non-teaching" className="rounded-lg" data-testid="tab-non-teaching-staff">Non-Teaching Staff</TabsTrigger>
         </TabsList>
         <TabsContent value="teaching">
-          <TeachingStaffTab canEdit={canEdit} />
+          <TeachingStaffTab canEdit={canEdit} branding={branding} />
         </TabsContent>
         <TabsContent value="non-teaching">
-          <NonTeachingStaffTab canEdit={canEdit} />
+          <NonTeachingStaffTab canEdit={canEdit} branding={branding} />
         </TabsContent>
       </Tabs>
     </div>

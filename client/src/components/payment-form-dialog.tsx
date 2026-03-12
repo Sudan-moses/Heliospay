@@ -52,6 +52,7 @@ export function PaymentFormDialog({
   const recordedByLabel = `${userRole} - ${userName}`;
 
   const [feeItems, setFeeItems] = useState<FeeItem[]>([{ feeType: "", amount: 0 }]);
+  const [receiptNum, setReceiptNum] = useState(() => `REC-${Date.now()}`);
 
   const totalAmount = feeItems.reduce((sum, item) => sum + (item.amount || 0), 0);
   const hasSSCSE = feeItems.some(i => i.feeType === "SSCSE Fee");
@@ -64,11 +65,21 @@ export function PaymentFormDialog({
       currency: students?.find(s => s.id === prefilledStudentId)?.currency || "UGX",
       term: "",
       feeType: "",
-      receiptNumber: `REC-${Date.now()}`,
+      receiptNumber: receiptNum,
       recordedBy: recordedByLabel,
       notes: "",
     },
   });
+
+  // Generate a fresh receipt number every time the dialog opens
+  useEffect(() => {
+    if (open) {
+      const fresh = `REC-${Date.now()}`;
+      setReceiptNum(fresh);
+      form.setValue("receiptNumber", fresh);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     const firstFeeType = feeItems[0]?.feeType || "";
@@ -108,8 +119,19 @@ export function PaymentFormDialog({
     const feeBreakdown = JSON.stringify(feeItems.filter(i => i.feeType && i.amount > 0));
     createMutation.mutate({ ...data, feeBreakdown, recordedBy: recordedByLabel }, {
       onSuccess: () => {
-        form.reset();
+        const newReceipt = `REC-${Date.now()}`;
+        setReceiptNum(newReceipt);
         setFeeItems([{ feeType: "", amount: 0 }]);
+        form.reset({
+          studentId: prefilledStudentId || 0,
+          amount: 0,
+          currency: "UGX",
+          term: "",
+          feeType: "",
+          receiptNumber: newReceipt,
+          recordedBy: recordedByLabel,
+          notes: "",
+        });
         onOpenChange(false);
       }
     });
