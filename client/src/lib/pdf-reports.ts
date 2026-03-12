@@ -820,10 +820,10 @@ export function generateSSCSECollectionReportPDF(
   y = tableHeader(doc, y, [
     { label: "#", x: 19 },
     { label: "Student Name", x: 28 },
-    { label: "Adm No.", x: 100 },
-    { label: "Receipt No.", x: 130 },
-    { label: "Term", x: 163 },
-    { label: "Date", x: 181, align: "right" },
+    { label: "Adm No.", x: 90 },
+    { label: "Receipt No.", x: 120 },
+    { label: "Term", x: 158 },
+    { label: "Date", x: 174, align: "right" },
     { label: "Amount (USD)", x: 195, align: "right" },
   ]);
 
@@ -837,12 +837,12 @@ export function generateSSCSECollectionReportPDF(
 
     doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
     doc.text(String(i + 1), 19, y + 2);
-    doc.text(row.studentName.substring(0, 30), 28, y + 2);
-    doc.text(row.studentAdmissionNumber, 100, y + 2);
-    doc.text(row.receiptNumber, 130, y + 2);
-    doc.text(row.term || "N/A", 163, y + 2);
+    doc.text(row.studentName.substring(0, 25), 28, y + 2);
+    doc.text((row.studentAdmissionNumber || "").substring(0, 12), 90, y + 2);
+    doc.text((row.receiptNumber || "").substring(0, 16), 120, y + 2);
+    doc.text(row.term || "N/A", 158, y + 2);
     const dateStr = row.paymentDate ? new Date(row.paymentDate).toLocaleDateString("en-GB") : "N/A";
-    doc.text(dateStr, 195, y + 2, { align: "right" });
+    doc.text(dateStr, 174, y + 2, { align: "right" });
     doc.setFont("helvetica", "bold");
     doc.text(fmt(row.amount, "USD"), 195, y + 2, { align: "right" });
     totalUSD += row.amount;
