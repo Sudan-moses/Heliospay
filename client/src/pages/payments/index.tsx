@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { usePayments } from "@/hooks/use-payments";
+import { usePayments, useDeletePayment } from "@/hooks/use-payments";
 import { useBranding } from "@/hooks/use-branding";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/utils";
@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Printer, FileDown, CheckCircle2, XCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Search, Printer, FileDown, CheckCircle2, XCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { PaymentFormDialog } from "@/components/payment-form-dialog";
 import { generatePaymentReceiptPDF } from "@/lib/pdf-receipts";
 import { generateSSCSECollectionReportPDF } from "@/lib/pdf-reports";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface VerifyResult {
   valid: boolean;
@@ -68,6 +69,7 @@ export default function PaymentsPage() {
   const userRole = (user as any)?.role;
   const canEdit = userRole !== "Principal";
   const isAdmin = userRole === "Admin";
+  const deleteMutation = useDeletePayment();
   const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
   
@@ -294,6 +296,44 @@ export default function PaymentsPage() {
                           }}>
                             <FileDown className="h-4 w-4" />
                           </Button>
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="rounded-xl h-8 w-8 hover:text-destructive hover:bg-destructive/10"
+                                  title="Delete Payment"
+                                  data-testid={`button-delete-payment-${payment.id}`}
+                                  disabled={deleteMutation.isPending}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete this payment?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    You are about to permanently delete the payment of{" "}
+                                    <strong>{formatCurrency(payment.amount, payment.currency)}</strong> for{" "}
+                                    <strong>{payment.studentName}</strong> (Receipt: {payment.receiptNumber}).
+                                    <br /><br />
+                                    This action cannot be undone and will affect the student's balance.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => deleteMutation.mutate(payment.id)}
+                                    data-testid={`button-confirm-delete-payment-${payment.id}`}
+                                  >
+                                    Yes, delete payment
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </TableCell>
                       </TableRow>,
                       ...(hasMultiple && isExpanded ? [

@@ -139,6 +139,13 @@ export async function registerRoutes(
     }
   });
 
+  app.delete('/api/payments/:id', isAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid payment ID" });
+    await storage.deletePayment(id);
+    res.status(204).send();
+  });
+
   app.get('/api/payments/report', isAuthenticated, blockInactive, async (req, res) => {
     const term = req.query.term as string | undefined;
     const classGrade = req.query.classGrade as string | undefined;

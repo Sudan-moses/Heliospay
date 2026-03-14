@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { type CreatePaymentRequest } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export function usePayments() {
   return useQuery({
@@ -46,5 +47,24 @@ export function useCreatePayment() {
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
+  });
+}
+
+export function useDeletePayment() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/payments/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.payments.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.students.list.path] });
+      toast({ title: "Payment deleted", description: "The payment has been removed." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete payment.", variant: "destructive" });
+    },
   });
 }

@@ -52,6 +52,7 @@ export interface IStorage {
   
   getPayments(): Promise<(Payment & { studentName: string; studentAdmissionNumber: string; studentClassGrade: string; studentAcademicYear: string; items: PaymentFeeItemDto[] })[]>;
   createPayment(payment: InsertPayment): Promise<Payment & { items: PaymentFeeItemDto[] }>;
+  deletePayment(id: number): Promise<void>;
 
   getExpenses(): Promise<Expense[]>;
   createExpense(expense: InsertExpense): Promise<Expense>;
@@ -231,6 +232,11 @@ export class DatabaseStorage implements IStorage {
       );
     }
     return { ...payment, items: feeItems };
+  }
+
+  async deletePayment(id: number): Promise<void> {
+    await db.delete(paymentItems).where(eq(paymentItems.paymentId, id));
+    await db.delete(payments).where(eq(payments.id, id));
   }
 
   async getExpenses(): Promise<Expense[]> {
