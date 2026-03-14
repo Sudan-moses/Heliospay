@@ -84,7 +84,19 @@ export function StudentFormDialog({
       });
     } else {
       createMutation.mutate(data, {
-        onSuccess: () => onOpenChange(false)
+        onSuccess: () => {
+          form.reset({
+            admissionNumber: "",
+            fullName: "",
+            classGrade: "",
+            academicYear: new Date().getFullYear().toString(),
+            parentPhoneNumber: "",
+            status: "Active",
+            tuitionFee: 0,
+            currency: "UGX",
+          });
+          onOpenChange(false);
+        }
       });
     }
   };
